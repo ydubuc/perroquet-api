@@ -1,5 +1,5 @@
 CREATE TABLE reminders (
     id UUID PRIMARY KEY,
-    content JSONB,
+    body TEXT NOT NULL,
     created_at BIGINT NOT NULL
 );

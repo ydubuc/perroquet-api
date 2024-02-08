@@ -1,5 +1,8 @@
-use axum::response::Html;
+use crate::AppState;
 
-pub async fn handler() -> Html<&'static str> {
-    Html("<h1>Hello, World!</h1>")
+use super::models::api_error::ApiError;
+
+pub async fn get_root(state: AppState) -> Result<String, ApiError> {
+    let response = format!("Hello, World! -from {}", state.envy.app_env);
+    Ok(response)
 }

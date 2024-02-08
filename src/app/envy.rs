@@ -4,4 +4,6 @@ use serde::Deserialize;
 pub struct Envy {
     pub app_env: String,
     pub port: Option<u16>,
+
+    pub database_url: String,
 }
