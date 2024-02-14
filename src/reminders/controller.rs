@@ -4,11 +4,7 @@ use axum::{
     Json,
 };
 
-use crate::{
-    app::{models::api_error::ApiError, structs::json_from_request::JsonFromRequest},
-    auth::models::claims::Claims,
-    AppState,
-};
+use crate::{app::models::api_error::ApiError, auth::models::claims::Claims, AppState};
 
 use super::{
     dtos::{
@@ -22,7 +18,7 @@ use super::{
 pub async fn create_reminder(
     State(state): State<AppState>,
     headers: HeaderMap,
-    JsonFromRequest(dto): JsonFromRequest<CreateReminderDto>,
+    Json(dto): Json<CreateReminderDto>,
 ) -> Result<Json<Reminder>, ApiError> {
     let claims = Claims::from_headers(headers, &state.envy.jwt_secret)?;
 
@@ -34,7 +30,7 @@ pub async fn create_reminder(
 
 pub async fn get_reminders(
     State(state): State<AppState>,
-    JsonFromRequest(dto): JsonFromRequest<GetRemindersFilterDto>,
+    Json(dto): Json<GetRemindersFilterDto>,
 ) -> Result<Json<Vec<Reminder>>, ApiError> {
     match service::get_reminders(&dto, &state).await {
         Ok(data) => Ok(Json(data)),
@@ -55,7 +51,7 @@ pub async fn get_reminder(
 pub async fn edit_reminder(
     State(state): State<AppState>,
     Path(id): Path<String>,
-    JsonFromRequest(dto): JsonFromRequest<EditReminderDto>,
+    Json(dto): Json<EditReminderDto>,
 ) -> Result<Json<Reminder>, ApiError> {
     match service::edit_reminder(&id, &dto, &state).await {
         Ok(data) => Ok(Json(data)),

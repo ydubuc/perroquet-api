@@ -60,7 +60,7 @@ pub async fn get_reminders(
     let mut query = "SELECT * FROM reminders WHERE true".to_string();
 
     let mut sort_field = "created_at".to_string();
-    let mut sort_order = "<".to_string();
+    let mut sort_order = "DESC".to_string();
     let mut page_limit: u8 = 80;
 
     let mut index: u8 = 0;

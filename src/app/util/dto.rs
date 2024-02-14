@@ -27,8 +27,8 @@ pub fn get_sort_params(
     }
 
     let order = match sort_params[1] {
-        "ASC" => ">",
-        "DESC" => "<",
+        "ASC" => "ASC",
+        "DESC" => "DESC",
         _ => {
             return Err(ApiError::new(
                 StatusCode::BAD_REQUEST,
