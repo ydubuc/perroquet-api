@@ -18,7 +18,7 @@ use super::{
 
 #[derive(Debug, Clone)]
 pub struct AppleAuthClient {
-    config: Config,
+    pub config: Config,
     client_secret: String,
     pub public_keys: Vec<PublicKey>,
     refreshed_at: Instant,

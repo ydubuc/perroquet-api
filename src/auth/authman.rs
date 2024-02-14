@@ -22,7 +22,7 @@ impl AuthMan {
         if readable_apple_client.expired() {
             drop(readable_apple_client);
             let mut writable_apple_client = self.apple_client.write().await;
-            writable_apple_client.login(http_client);
+            let _ = writable_apple_client.login(http_client).await;
         }
 
         return self.apple_client.clone();

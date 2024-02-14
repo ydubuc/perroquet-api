@@ -25,7 +25,7 @@ pub async fn signin(
     State(state): State<AppState>,
     JsonFromRequest(dto): JsonFromRequest<SigninDto>,
 ) -> Result<Json<AccessInfo>, ApiError> {
-    match service::signin(&dto, &state).await {
+    match service::signin(&dto, true, &state).await {
         Ok(data) => Ok(Json(data)),
         Err(e) => Err(e),
     }
