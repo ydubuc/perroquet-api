@@ -1,10 +1,9 @@
 use axum::{
-    extract::{Path, State},
-    http::HeaderMap,
+    extract::{Path, Query, State},
     Json,
 };
 
-use crate::{app::models::api_error::ApiError, auth::models::claims::Claims, AppState};
+use crate::{app::models::api_error::ApiError, auth::models::claims::ExtractClaims, AppState};
 
 use super::{
     dtos::{
@@ -17,11 +16,9 @@ use super::{
 
 pub async fn create_reminder(
     State(state): State<AppState>,
-    headers: HeaderMap,
+    ExtractClaims(claims): ExtractClaims,
     Json(dto): Json<CreateReminderDto>,
 ) -> Result<Json<Reminder>, ApiError> {
-    let claims = Claims::from_headers(headers, &state.envy.jwt_secret)?;
-
     match service::create_reminder(&dto, &claims, &state).await {
         Ok(data) => Ok(Json(data)),
         Err(e) => Err(e),
@@ -30,7 +27,7 @@ pub async fn create_reminder(
 
 pub async fn get_reminders(
     State(state): State<AppState>,
-    Json(dto): Json<GetRemindersFilterDto>,
+    Query(dto): Query<GetRemindersFilterDto>,
 ) -> Result<Json<Vec<Reminder>>, ApiError> {
     match service::get_reminders(&dto, &state).await {
         Ok(data) => Ok(Json(data)),

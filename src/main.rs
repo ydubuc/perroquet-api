@@ -1,16 +1,18 @@
 use std::{env, sync::Arc, time::Duration};
 
-use app::envy::Envy;
 use auth::authman::AuthMan;
 use axum::{
     routing::{delete, get, patch, post},
     Router,
 };
-use sqlx::{postgres::PgPoolOptions, PgPool};
+use sqlx::postgres::PgPoolOptions;
 use tokio::sync::RwLock;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::auth::apple::{self, client::AppleAuthClient};
+use crate::{
+    app::models::app_state::AppState,
+    auth::apple::{self, client::AppleAuthClient},
+};
 
 mod app;
 mod auth;
@@ -19,14 +21,6 @@ mod users;
 
 #[macro_use]
 extern crate lazy_static;
-
-#[derive(Clone)]
-pub struct AppState {
-    pub envy: Envy,
-    pub http_client: reqwest::Client,
-    pub authman: AuthMan,
-    pub pool: PgPool,
-}
 
 #[tokio::main]
 async fn main() {
