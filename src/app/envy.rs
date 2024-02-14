@@ -6,4 +6,11 @@ pub struct Envy {
     pub port: Option<u16>,
 
     pub database_url: String,
+
+    pub jwt_secret: String,
+
+    pub apple_team_id: String,
+    pub apple_client_id: String,
+    pub apple_key_id: String,
+    pub apple_private_key: String,
 }

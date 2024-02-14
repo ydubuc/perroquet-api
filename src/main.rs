@@ -1,20 +1,31 @@
-use std::{env, time::Duration};
+use std::{env, sync::Arc, time::Duration};
 
 use app::envy::Envy;
+use auth::authman::AuthMan;
 use axum::{
-    routing::{get, post},
+    routing::{delete, get, patch, post},
     Router,
 };
 use sqlx::{postgres::PgPoolOptions, PgPool};
+use tokio::sync::RwLock;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
+use crate::auth::apple::{self, client::AppleAuthClient};
+
 mod app;
+mod auth;
 mod reminders;
+mod users;
+
+#[macro_use]
+extern crate lazy_static;
 
 #[derive(Clone)]
 pub struct AppState {
-    pub db_pool: PgPool,
     pub envy: Envy,
+    pub http_client: reqwest::Client,
+    pub authman: AuthMan,
+    pub pool: PgPool,
 }
 
 #[tokio::main]
@@ -42,28 +53,59 @@ async fn main() {
 
     // properties
     let port = envy.port.to_owned().unwrap_or(3000);
+    let http_client = reqwest::Client::new();
 
-    let db_pool = PgPoolOptions::new()
+    let apple_config = apple::config::Config {
+        team_id: envy.apple_team_id.to_owned(),
+        client_id: envy.apple_client_id.to_owned(),
+        key_id: envy.apple_key_id.to_owned(),
+        private_key: envy.apple_private_key.to_owned(),
+    };
+    let mut apple_client = AppleAuthClient::new(apple_config);
+    apple_client
+        .login(&http_client)
+        .await
+        .expect("failed to login to apple_client");
+
+    let authman = AuthMan::new(Arc::new(RwLock::new(apple_client)));
+
+    let pool = PgPoolOptions::new()
         .max_connections(10)
         .acquire_timeout(Duration::from_secs(5))
         .connect(&envy.database_url)
         .await
         .expect("database connection failed");
-
     tracing::info!("connected to database");
 
-    let app_state = AppState { db_pool, envy };
+    let app_state = AppState {
+        envy,
+        http_client,
+        authman,
+        pool,
+    };
 
     // app
     let app = Router::new()
         .route("/", get(app::controller::get_root))
+        .route("/auth/signup", post(auth::controller::signup))
+        .route("/auth/signin", post(auth::controller::signin))
+        .route("/auth/signin/apple", post(auth::controller::signin_apple))
         .route("/reminders", post(reminders::controller::create_reminder))
         .route("/reminders", get(reminders::controller::get_reminders))
+        .route("/reminders/:id", get(reminders::controller::get_reminder))
+        .route(
+            "/reminders/:id",
+            patch(reminders::controller::edit_reminder),
+        )
+        .route(
+            "/reminders/:id",
+            delete(reminders::controller::delete_reminder),
+        )
         .with_state(app_state);
 
     let addr = format!("0.0.0.0:{}", port);
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     tracing::info!("listening on {}", listener.local_addr().unwrap());
 
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(listener, app).await.unwrap()
 }

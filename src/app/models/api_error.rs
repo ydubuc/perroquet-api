@@ -7,6 +7,22 @@ pub struct ApiError {
     pub message: String,
 }
 
+impl ApiError {
+    pub fn new(code: StatusCode, message: &str) -> Self {
+        Self {
+            code,
+            message: message.to_string(),
+        }
+    }
+
+    pub fn internal_server_error() -> Self {
+        Self {
+            code: StatusCode::INTERNAL_SERVER_ERROR,
+            message: "An error occurred.".to_string(),
+        }
+    }
+}
+
 impl From<JsonRejection> for ApiError {
     fn from(rejection: JsonRejection) -> Self {
         let code = match rejection {

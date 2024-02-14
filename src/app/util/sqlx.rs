@@ -1,42 +1,20 @@
-// pub struct QueryBuilder {
-//     select: String,
-//     from: String,
-//     where_clause: Option<String>,
-// }
+use std::borrow::Cow;
 
-// impl QueryBuilder {
-//     pub fn new() -> Self {
-//         QueryBuilder {
-//             select: String::new(),
-//             from: String::new(),
-//             where_clause: None,
-//         }
-//     }
+use sqlx::error::DatabaseError;
 
-//     pub fn select(&mut self, columns: &str) -> &mut Self {
-//         self.select = format!("SELECT {}", columns);
-//         self
-//     }
+#[non_exhaustive]
+pub struct SqlStateCodes;
 
-//     pub fn from(&mut self, table: &str) -> &mut Self {
-//         self.from = format!("FROM {}", table);
-//         self
-//     }
+impl SqlStateCodes {
+    pub const UNIQUE_VIOLATION: &'static str = "23505";
+}
 
-//     fn where_clause<T>(&mut self, field: &str, value: T) -> &mut Self
-//     where
-//         T: ToString,
-//     {
-//         let condition = format!("{} = {}", field, value.to_string());
-//         self.where_clause = Some(condition);
-//         self
-//     }
-
-//     pub fn build(&self) -> String {
-//         let mut query = format!("{} {}", self.select, self.from);
-//         if let Some(where_clause) = &self.where_clause {
-//             query.push_str(&format!(" {}", where_clause));
-//         }
-//         query
-//     }
-// }
+pub fn extract_db_err_code(db_err: &dyn DatabaseError) -> Option<String> {
+    match db_err.code() {
+        Some(code) => match code {
+            Cow::Borrowed(val) => Some(val.to_owned()),
+            Cow::Owned(val) => Some(val),
+        },
+        None => None,
+    }
+}

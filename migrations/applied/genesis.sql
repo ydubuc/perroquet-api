@@ -1,5 +1,24 @@
-CREATE TABLE reminders (
+CREATE TABLE users(
     id UUID PRIMARY KEY,
-    body TEXT NOT NULL,
+    id_apple TEXT,
+    username TEXT NOT NULL,
+    username_key TEXT UNIQUE NOT NULL,
+    email TEXT NOT NULL,
+    email_key TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    displayname TEXT NOT NULL,
+    avatar_url TEXT,
+    updated_at BIGINT NOT NULL,
+    created_at BIGINT NOT NULL
+);
+
+CREATE TABLE reminders(
+    id UUID PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title TEXT,
+    content TEXT NOT NULL,
+    frequency TEXT,
+    trigger_at BIGINT NOT NULL,
+    updated_at BIGINT NOT NULL,
     created_at BIGINT NOT NULL
 );
