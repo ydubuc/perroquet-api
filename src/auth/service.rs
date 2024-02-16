@@ -13,16 +13,15 @@ use super::{
     util::password,
 };
 
-pub async fn signup(
-    dto: &SignupDto,
-    id_apple: &Option<String>,
-    state: &AppState,
-) -> Result<AccessInfo, ApiError> {
-    let Ok(password_hash) = password::hash(dto.password.to_string()).await else {
+pub async fn signup(dto: &SignupDto, state: &AppState) -> Result<AccessInfo, ApiError> {
+    let Some(password) = &dto.password else {
+        return Err(ApiError::new(StatusCode::BAD_REQUEST, "Missing password."));
+    };
+    let Ok(password_hash) = password::hash(password.to_string()).await else {
         return Err(ApiError::internal_server_error());
     };
 
-    let user = User::new(&dto.username, &dto.email, &password_hash, id_apple);
+    let user = User::new(&dto.username, &dto.email, &Some(password_hash), &None);
 
     tracing::info!("{:?}", user);
 
@@ -32,6 +31,34 @@ pub async fn signup(
                 username: None,
                 email: Some(dto.email.to_owned()),
                 password: dto.password.to_owned(),
+            };
+
+            signin(&signin_dto, true, state).await
+        }
+        Err(e) => Err(e),
+    }
+}
+
+async fn signup_apple(
+    dto: &SignupDto,
+    id_apple: &str,
+    state: &AppState,
+) -> Result<AccessInfo, ApiError> {
+    let user = User::new(
+        &dto.username,
+        &dto.email,
+        &None,
+        &Some(id_apple.to_string()),
+    );
+
+    tracing::info!("{:?}", user);
+
+    match users::service::create_user(user, state).await {
+        Ok(_) => {
+            let signin_dto = SigninDto {
+                username: None,
+                email: Some(dto.email.to_owned()),
+                password: None,
             };
 
             signin(&signin_dto, true, state).await
@@ -55,8 +82,20 @@ pub async fn signin(
     };
 
     if verify_password {
+        let Some(dto_password) = &dto.password else {
+            return Err(ApiError::new(
+                StatusCode::UNAUTHORIZED,
+                "Invalid credentials.",
+            ));
+        };
+        let Some(user_password) = &user.password else {
+            return Err(ApiError::new(
+                StatusCode::UNAUTHORIZED,
+                "Invalid credentials.",
+            ));
+        };
         let Ok(matches) =
-            password::verify(dto.password.to_string(), user.password.to_string()).await
+            password::verify(dto_password.to_string(), user_password.to_string()).await
         else {
             // TODO: return sleep time error
             return Err(ApiError::new(
@@ -114,10 +153,10 @@ pub async fn signin_apple(dto: &SigninAppleDto, state: &AppState) -> Result<Acce
             let dto = SignupDto {
                 username: None,
                 email: id_token_claims.email,
-                password: password::generate(16),
+                password: None,
             };
 
-            return signup(&dto, &Some(id_token_claims.sub), &state).await;
+            return signup_apple(&dto, &id_token_claims.sub, &state).await;
         }
     }
 }

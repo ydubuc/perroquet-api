@@ -20,5 +20,5 @@ pub struct SigninDto {
         ),
         custom = "super::validate_password"
     )]
-    pub password: String,
+    pub password: Option<String>,
 }

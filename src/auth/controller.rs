@@ -12,7 +12,7 @@ pub async fn signup(
     State(state): State<AppState>,
     Json(dto): Json<SignupDto>,
 ) -> Result<Json<AccessInfo>, ApiError> {
-    match service::signup(&dto, &None, &state).await {
+    match service::signup(&dto, &state).await {
         Ok(data) => Ok(Json(data)),
         Err(e) => Err(e),
     }
