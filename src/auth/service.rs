@@ -61,7 +61,7 @@ async fn signup_apple(
                 password: None,
             };
 
-            signin(&signin_dto, true, state).await
+            signin(&signin_dto, false, state).await
         }
         Err(e) => Err(e),
     }
@@ -140,7 +140,7 @@ pub async fn signin_apple(dto: &SigninAppleDto, state: &AppState) -> Result<Acce
             let dto = SigninDto {
                 username: None,
                 email: Some(user.email),
-                password: user.password,
+                password: None,
             };
 
             return signin(&dto, false, &state).await;
