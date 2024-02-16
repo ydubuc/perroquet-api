@@ -16,6 +16,7 @@ use crate::{
 
 mod app;
 mod auth;
+mod devices;
 mod reminders;
 mod users;
 
@@ -49,7 +50,7 @@ async fn main() {
     let port = envy.port.to_owned().unwrap_or(3000);
     let http_client = reqwest::Client::new();
 
-    let apple_config = apple::config::Config {
+    let apple_config = apple::models::client_config::ClientConfig {
         team_id: envy.apple_team_id.to_owned(),
         client_id: envy.apple_client_id.to_owned(),
         key_id: envy.apple_key_id.to_owned(),

@@ -5,15 +5,18 @@ use sqlx::FromRow;
 use uuid::Uuid;
 
 use crate::{
-    app, auth::models::claims::Claims, reminders::dtos::create_reminder_dto::CreateReminderDto,
+    app, auth::models::claims::AccessTokenClaims,
+    reminders::dtos::create_reminder_dto::CreateReminderDto,
 };
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct Reminder {
     pub id: sqlx::types::Uuid,
     pub user_id: sqlx::types::Uuid,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
     pub content: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub frequency: Option<String>,
     pub trigger_at: i64,
     pub updated_at: i64,
@@ -21,7 +24,7 @@ pub struct Reminder {
 }
 
 impl Reminder {
-    pub fn new(dto: &CreateReminderDto, claims: &Claims) -> Self {
+    pub fn new(dto: &CreateReminderDto, claims: &AccessTokenClaims) -> Self {
         let current_time = app::util::time::current_time_in_millis();
 
         Self {

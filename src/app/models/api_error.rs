@@ -1,5 +1,8 @@
+use std::borrow::Cow;
+
 use axum::{extract::rejection::JsonRejection, http::StatusCode, response::IntoResponse, Json};
 use serde_json::json;
+use validator::{ValidationError, ValidationErrors};
 
 #[derive(Debug)]
 pub struct ApiError {
@@ -35,6 +38,40 @@ impl From<JsonRejection> for ApiError {
         Self {
             code,
             message: rejection.to_string(),
+        }
+    }
+}
+
+impl From<ValidationError> for ApiError {
+    fn from(error: ValidationError) -> Self {
+        let message = error
+            .message
+            .unwrap_or(Cow::from("Invalid input."))
+            .to_string();
+
+        Self {
+            code: StatusCode::BAD_REQUEST,
+            message,
+        }
+    }
+}
+
+impl From<ValidationErrors> for ApiError {
+    fn from(errors: ValidationErrors) -> Self {
+        let mut message = "".to_string();
+        let field_errors = errors.field_errors();
+
+        for (_, value) in field_errors {
+            for error in value {
+                if let Some(error_message) = &error.message {
+                    message = message + error_message;
+                }
+            }
+        }
+
+        Self {
+            code: StatusCode::UNPROCESSABLE_ENTITY,
+            message,
         }
     }
 }

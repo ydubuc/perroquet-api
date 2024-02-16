@@ -2,8 +2,8 @@ use axum::http::StatusCode;
 use sqlx::Postgres;
 
 use crate::{
-    app::{self, models::api_error::ApiError},
-    auth::models::claims::Claims,
+    app::{self, models::api_error::ApiError, util::time},
+    auth::models::claims::AccessTokenClaims,
     AppState,
 };
 
@@ -17,7 +17,7 @@ use super::{
 
 pub async fn create_reminder(
     dto: &CreateReminderDto,
-    claims: &Claims,
+    claims: &AccessTokenClaims,
     state: &AppState,
 ) -> Result<Reminder, ApiError> {
     let reminder = Reminder::new(dto, claims);
@@ -158,6 +158,7 @@ pub async fn get_reminder(id: &str, state: &AppState) -> Result<Reminder, ApiErr
 pub async fn edit_reminder(
     id: &str,
     dto: &EditReminderDto,
+    claims: &AccessTokenClaims,
     state: &AppState,
 ) -> Result<Reminder, ApiError> {
     // SQL
@@ -167,19 +168,16 @@ pub async fn edit_reminder(
 
     if dto.content.is_some() {
         index += 1;
-        query.push_str(&format!("content = ${}", index));
-    }
-
-    if index == 0 {
-        return Err(ApiError::new(
-            StatusCode::BAD_REQUEST,
-            "Received nothing to edit.",
-        ));
+        query.push_str(&format!("content = ${} ", index));
     }
 
     index += 1;
-    query.push_str(&format!(" WHERE id = ${}", index));
-    query.push_str(" RETURNING *");
+    query.push_str(&format!("updated_at = ${} ", index));
+    index += 1;
+    query.push_str(&format!("WHERE id = ${} ", index));
+    index += 1;
+    query.push_str(&format!("AND user_id = ${} ", index));
+    query.push_str("RETURNING *");
 
     // SQLX
     let mut sqlx = sqlx::query_as::<Postgres, Reminder>(&query);
@@ -187,7 +185,9 @@ pub async fn edit_reminder(
     if let Some(content) = &dto.content {
         sqlx = sqlx.bind(content);
     }
+    sqlx = sqlx.bind(time::current_time_in_millis());
     sqlx = sqlx.bind(id);
+    sqlx = sqlx.bind(&claims.id);
 
     let sqlx_result = sqlx.fetch_optional(&state.pool).await;
 

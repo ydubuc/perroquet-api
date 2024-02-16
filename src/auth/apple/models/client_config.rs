@@ -1,5 +1,5 @@
 #[derive(Debug, Clone)]
-pub struct Config {
+pub struct ClientConfig {
     pub team_id: String,
     pub client_id: String,
     pub key_id: String,

@@ -40,11 +40,3 @@ pub async fn verify(password: String, hash: String) -> Result<bool, AppError> {
         Err(_) => Err(AppError::new("password::verify task failed")),
     }
 }
-
-pub fn generate(length: usize) -> String {
-    rand::thread_rng()
-        .sample_iter(&Alphanumeric)
-        .take(length)
-        .map(char::from)
-        .collect()
-}

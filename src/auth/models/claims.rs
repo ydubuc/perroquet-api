@@ -4,19 +4,60 @@ use axum::{
     http::{header::AUTHORIZATION, request::Parts, HeaderMap, StatusCode},
     RequestPartsExt,
 };
-use jsonwebtoken::{errors::ErrorKind, Algorithm, DecodingKey, Validation};
+use jsonwebtoken::{
+    encode, errors::ErrorKind, Algorithm, DecodingKey, EncodingKey, Header, Validation,
+};
 use serde::{Deserialize, Serialize};
 
-use crate::{app::models::api_error::ApiError, AppState};
+use crate::{
+    app::{
+        models::{api_error::ApiError, app_error::AppError},
+        util::time,
+    },
+    auth::config::JWT_EXP,
+    AppState,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Claims {
+pub struct AccessTokenClaims {
     pub id: String,
     pub iat: u64,
     pub exp: u64,
 }
 
-impl Claims {
+impl AccessTokenClaims {
+    pub fn new(id: &str) -> Self {
+        let iat = time::current_time_in_secs() as u64;
+        let exp = iat + JWT_EXP;
+
+        Self {
+            id: id.to_string(),
+            iat,
+            exp,
+        }
+    }
+
+    pub fn to_jwt(self, secret: &str, pepper: Option<&str>) -> Result<String, AppError> {
+        let mut secret = secret.to_string();
+        if let Some(pepper) = pepper {
+            secret = [&secret, pepper].concat();
+        }
+
+        let encode_result = encode(
+            &Header::default(),
+            &self,
+            &EncodingKey::from_secret(secret.as_ref()),
+        );
+
+        match encode_result {
+            Ok(jwt) => Ok(jwt),
+            Err(e) => {
+                tracing::error!(%e);
+                Err(AppError::new("failed to encode claims"))
+            }
+        }
+    }
+
     fn from_headers(headers: &HeaderMap, secret: &str) -> Result<Self, ApiError> {
         let Some(header_value) = headers.get(AUTHORIZATION) else {
             return Err(ApiError::new(
@@ -40,10 +81,28 @@ impl Claims {
             ));
         }
 
-        let access_token = split[1];
+        AccessTokenClaims::from_jwt(split[1], secret, None, true)
+    }
+
+    pub fn from_jwt(
+        jwt: &str,
+        secret: &str,
+        pepper: Option<&str>,
+        validate_exp: bool,
+    ) -> Result<Self, ApiError> {
+        let mut secret = secret.to_string();
+        if let Some(pepper) = pepper {
+            secret = [&secret, pepper].concat();
+        }
+
         let decoding_key = DecodingKey::from_secret(secret.as_bytes());
-        let validation = Validation::new(Algorithm::HS256);
-        match jsonwebtoken::decode::<Claims>(&access_token, &decoding_key, &validation) {
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.validate_exp = validate_exp;
+
+        let decode_result =
+            jsonwebtoken::decode::<AccessTokenClaims>(&jwt, &decoding_key, &validation);
+
+        match decode_result {
             Ok(data) => Ok(data.claims),
             Err(e) => match e.kind() {
                 ErrorKind::ExpiredSignature => {
@@ -55,7 +114,7 @@ impl Claims {
     }
 }
 
-pub struct ExtractClaims(pub Claims);
+pub struct ExtractClaims(pub AccessTokenClaims);
 
 #[async_trait]
 impl<S> FromRequestParts<S> for ExtractClaims
@@ -69,7 +128,7 @@ where
         let state = parts.extract_with_state::<AppState, _>(state).await?;
         let headers = &parts.headers;
 
-        match Claims::from_headers(headers, &state.envy.jwt_secret) {
+        match AccessTokenClaims::from_headers(headers, &state.envy.jwt_secret) {
             Ok(claims) => Ok(ExtractClaims(claims)),
             Err(e) => Err(e),
         }

@@ -9,23 +9,22 @@ use crate::app::{
 };
 
 use super::{
-    config::Config,
-    models::{client_claims::ClientClaims, public_key::PublicKey},
-    structs::{
+    models::{client_claims::ClientClaims, client_config::ClientConfig, public_key::PublicKey},
+    responses::{
         apple_auth_code_res::AppleAuthCodeResponse, apple_public_keys_res::ApplePublicKeysResponse,
     },
 };
 
 #[derive(Debug, Clone)]
 pub struct AppleAuthClient {
-    pub config: Config,
+    pub config: ClientConfig,
     client_secret: String,
     pub public_keys: Vec<PublicKey>,
     refreshed_at: Instant,
 }
 
 impl AppleAuthClient {
-    pub fn new(config: Config) -> Self {
+    pub fn new(config: ClientConfig) -> Self {
         Self {
             config,
             client_secret: String::new(),

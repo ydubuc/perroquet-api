@@ -7,13 +7,19 @@ use crate::{app::util::time, users::util};
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct User {
     pub id: sqlx::types::Uuid,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub id_apple: Option<String>,
     pub username: String,
+    #[serde(skip_serializing)]
     pub username_key: String,
+    #[serde(skip_serializing)]
     pub email: String,
+    #[serde(skip_serializing)]
     pub email_key: String,
+    #[serde(skip_serializing)]
     pub password: Option<String>,
     pub displayname: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub avatar_url: Option<String>,
     pub updated_at: i64,
     pub created_at: i64,

@@ -8,10 +8,15 @@ use crate::{
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AppleAuthCodeResponse {
+    #[serde(rename(deserialize = "id_token"))]
     pub id_token: String,
+    #[serde(rename(deserialize = "access_token"))]
     pub access_token: String,
+    #[serde(rename(deserialize = "refresh_token"))]
     pub refresh_token: String,
+    #[serde(rename(deserialize = "token_type"))]
     pub token_type: String,
+    #[serde(rename(deserialize = "expires_in"))]
     pub expires_in: u64,
 }
 

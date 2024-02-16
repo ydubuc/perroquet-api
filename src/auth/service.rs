@@ -2,14 +2,17 @@ use axum::http::StatusCode;
 
 use crate::{
     app::models::api_error::ApiError,
+    devices,
     users::{self, models::user::User},
     AppState,
 };
 
 use super::{
-    dtos::{signin_apple_dto::SigninAppleDto, signin_dto::SigninDto, signup_dto::SignupDto},
-    jwt,
-    models::access_info::AccessInfo,
+    dtos::{
+        refresh_access_info_dto::RefreshAccessInfoDto, signin_apple_dto::SigninAppleDto,
+        signin_dto::SigninDto, signup_dto::SignupDto,
+    },
+    models::{access_info::AccessInfo, claims::AccessTokenClaims},
     util::password,
 };
 
@@ -96,12 +99,46 @@ pub async fn signin_apple(dto: &SigninAppleDto, state: &AppState) -> Result<Acce
 }
 
 async fn signin_user(user: &User, state: &AppState) -> Result<AccessInfo, ApiError> {
-    // TODO: create device
+    let claims = AccessTokenClaims::new(&user.id.to_string());
+    let Ok(access_token) = claims.to_jwt(&state.envy.jwt_secret, None) else {
+        return Err(ApiError::internal_server_error());
+    };
+
+    let Ok(device) = devices::service::create_device(user, state).await else {
+        return Err(ApiError::internal_server_error());
+    };
+
     let access_info = AccessInfo {
-        access_token: jwt::service::sign_jwt(&user, &state.envy.jwt_secret, None),
-        refresh_token: None,
-        device_id: None,
+        access_token,
+        refresh_token: Some(device.refresh_token),
+        device_id: Some(device.id.to_string()),
     };
 
     Ok(access_info)
+}
+
+pub async fn refresh(dto: &RefreshAccessInfoDto, state: &AppState) -> Result<AccessInfo, ApiError> {
+    let refresh_device_result = devices::service::refresh_device(&dto.refresh_token, state).await;
+
+    match refresh_device_result {
+        Ok(device) => {
+            let claims = AccessTokenClaims::new(&device.user_id.to_string());
+            let Ok(access_token) = claims.to_jwt(&state.envy.jwt_secret, None) else {
+                return Err(ApiError::internal_server_error());
+            };
+
+            Ok(AccessInfo {
+                access_token,
+                refresh_token: Some(device.refresh_token),
+                device_id: Some(device.id.to_string()),
+            })
+        }
+        Err(e) => match e.code {
+            StatusCode::NOT_FOUND => Err(ApiError::new(
+                StatusCode::UNAUTHORIZED,
+                "Device not found or expired.",
+            )),
+            _ => Err(e),
+        },
+    }
 }

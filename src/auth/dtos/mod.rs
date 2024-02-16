@@ -1,6 +1,9 @@
+use std::borrow::Cow;
+
 use regex::Regex;
 use validator::ValidationError;
 
+pub mod refresh_access_info_dto;
 pub mod signin_apple_dto;
 pub mod signin_dto;
 pub mod signup_dto;
@@ -16,7 +19,13 @@ lazy_static! {
 
 pub fn validate_password(value: &str) -> Result<(), ValidationError> {
     match PASSWORD_REGEX.is_match(value) {
-        true => Err(ValidationError::new("password_validation")),
+        true => {
+            let mut error = ValidationError::new("weak_password");
+            error.message = Some(Cow::from(
+                "password must include a capital, a number, and a special character.",
+            ));
+            Err(error)
+        }
         false => Ok(()),
     }
 }

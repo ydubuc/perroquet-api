@@ -2,6 +2,7 @@ use axum::{
     extract::{Path, Query, State},
     Json,
 };
+use validator::Validate;
 
 use crate::{app::models::api_error::ApiError, auth::models::claims::ExtractClaims, AppState};
 
@@ -19,6 +20,7 @@ pub async fn create_reminder(
     ExtractClaims(claims): ExtractClaims,
     Json(dto): Json<CreateReminderDto>,
 ) -> Result<Json<Reminder>, ApiError> {
+    dto.validate()?;
     match service::create_reminder(&dto, &claims, &state).await {
         Ok(data) => Ok(Json(data)),
         Err(e) => Err(e),
@@ -27,8 +29,10 @@ pub async fn create_reminder(
 
 pub async fn get_reminders(
     State(state): State<AppState>,
+    ExtractClaims(claims): ExtractClaims,
     Query(dto): Query<GetRemindersFilterDto>,
 ) -> Result<Json<Vec<Reminder>>, ApiError> {
+    dto.validate()?;
     match service::get_reminders(&dto, &state).await {
         Ok(data) => Ok(Json(data)),
         Err(e) => Err(e),
@@ -37,6 +41,7 @@ pub async fn get_reminders(
 
 pub async fn get_reminder(
     State(state): State<AppState>,
+    ExtractClaims(claims): ExtractClaims,
     Path(id): Path<String>,
 ) -> Result<Json<Reminder>, ApiError> {
     match service::get_reminder(&id, &state).await {
@@ -48,9 +53,11 @@ pub async fn get_reminder(
 pub async fn edit_reminder(
     State(state): State<AppState>,
     Path(id): Path<String>,
+    ExtractClaims(claims): ExtractClaims,
     Json(dto): Json<EditReminderDto>,
 ) -> Result<Json<Reminder>, ApiError> {
-    match service::edit_reminder(&id, &dto, &state).await {
+    dto.validate()?;
+    match service::edit_reminder(&id, &dto, &claims, &state).await {
         Ok(data) => Ok(Json(data)),
         Err(e) => Err(e),
     }
@@ -59,6 +66,7 @@ pub async fn edit_reminder(
 pub async fn delete_reminder(
     State(state): State<AppState>,
     Path(id): Path<String>,
+    ExtractClaims(claims): ExtractClaims,
 ) -> Result<(), ApiError> {
     return service::delete_reminder(&id, &state).await;
 }

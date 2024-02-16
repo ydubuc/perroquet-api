@@ -12,6 +12,16 @@ CREATE TABLE users(
     created_at BIGINT NOT NULL
 );
 
+CREATE TABLE devices(
+    id UUID PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    refresh_token TEXT UNIQUE,
+    messaging_token TEXT,
+    refreshed_at BIGINT NOT NULL,
+    updated_at BIGINT NOT NULL,
+    created_at BIGINT NOT NULL
+);
+
 CREATE TABLE reminders(
     id UUID PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,

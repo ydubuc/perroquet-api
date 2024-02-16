@@ -15,7 +15,7 @@ pub struct SigninDto {
     #[validate(
         length(
             min = 8,
-            max = 512,
+            max = 64,
             message = "password must be between at least 8 characters."
         ),
         custom = "super::validate_password"

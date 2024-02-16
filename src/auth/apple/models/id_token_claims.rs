@@ -2,29 +2,26 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IdTokenClaims {
+    #[serde(rename(deserialize = "email"))]
     pub email: String,
+    #[serde(rename(deserialize = "email_verified"))]
     pub email_verified: bool,
+    #[serde(rename(deserialize = "is_private_email"))]
     pub is_private_email: bool,
+    #[serde(rename(deserialize = "at_hash"))]
     pub at_hash: String,
+    #[serde(rename(deserialize = "auth_time"))]
     pub auth_time: u64,
+    #[serde(rename(deserialize = "nonce_supported"))]
     pub nonce_supported: bool,
+    #[serde(rename(deserialize = "iss"))]
     pub iss: String,
+    #[serde(rename(deserialize = "sub"))]
     pub sub: String,
+    #[serde(rename(deserialize = "aud"))]
     pub aud: String,
+    #[serde(rename(deserialize = "iat"))]
     pub iat: i64,
+    #[serde(rename(deserialize = "exp"))]
     pub exp: i64,
 }
-
-// {
-//   "iss": "https://appleid.apple.com",
-//   "aud": "com.beamcove.Perroquet",
-//   "exp": 1707940846,
-//   "iat": 1707854446,
-//   "sub": "001690.1f938437e59a41f6aaabc78f10f6237c.2027",
-//   "at_hash": "uRVYx9H0ZRQZNHtNrIM3MA",
-//   "email": "mkq6mvmwhd@privaterelay.appleid.com",
-//   "email_verified": true,
-//   "is_private_email": true,
-//   "auth_time": 1707854434,
-//   "nonce_supported": true
-// }
