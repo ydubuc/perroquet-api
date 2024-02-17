@@ -6,6 +6,7 @@ use validator::ValidationError;
 pub mod refresh_access_info_dto;
 pub mod signin_apple_dto;
 pub mod signin_dto;
+pub mod signout_dto;
 pub mod signup_dto;
 
 lazy_static! {

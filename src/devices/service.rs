@@ -7,7 +7,7 @@ use crate::{
         models::{api_error::ApiError, app_state::AppState},
         util::time,
     },
-    auth::models::{access_info::AccessInfo, claims::AccessTokenClaims},
+    auth::models::claims::AccessTokenClaims,
     users::models::user::User,
 };
 
@@ -19,7 +19,8 @@ pub async fn create_device(user: &User, state: &AppState) -> Result<Device, ApiE
     let sqlx_result = sqlx::query(
         "
         INSERT INTO devices (
-            id, user_id, refresh_token, messaging_token, refreshed_at, updated_at, created_at
+            id, user_id, refresh_token, messaging_token,
+            refreshed_at, updated_at, created_at
         )
         VALUES ($1, $2, $3, $4, $5, $6, $7)
         ",
@@ -129,14 +130,19 @@ pub async fn edit_device(
     }
 }
 
-pub async fn delete_device(id: &str, state: &AppState) -> Result<(), ApiError> {
+pub async fn delete_device(
+    id: &str,
+    claims: &AccessTokenClaims,
+    state: &AppState,
+) -> Result<(), ApiError> {
     let sqlx_result = sqlx::query(
         "
         DELETE FROM devices
-        WHERE id = $1
+        WHERE id = $1 AND user_id = $2
         ",
     )
     .bind(id)
+    .bind(&claims.id)
     .execute(&state.pool)
     .await;
 

@@ -6,9 +6,12 @@ use crate::{app::models::api_error::ApiError, AppState};
 use super::{
     dtos::{
         refresh_access_info_dto::RefreshAccessInfoDto, signin_apple_dto::SigninAppleDto,
-        signin_dto::SigninDto, signup_dto::SignupDto,
+        signin_dto::SigninDto, signout_dto::SignoutDto, signup_dto::SignupDto,
     },
-    models::access_info::AccessInfo,
+    models::{
+        access_info::AccessInfo,
+        claims::{AccessTokenClaims, ExtractClaims},
+    },
     service,
 };
 
@@ -54,4 +57,13 @@ pub async fn refresh(
         Ok(data) => Ok(Json(data)),
         Err(e) => Err(e),
     }
+}
+
+pub async fn signout(
+    State(state): State<AppState>,
+    ExtractClaims(claims): ExtractClaims,
+    Json(dto): Json<SignoutDto>,
+) -> Result<(), ApiError> {
+    dto.validate()?;
+    service::signout(&dto, &claims, &state).await
 }

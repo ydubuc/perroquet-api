@@ -85,6 +85,8 @@ async fn main() {
         .route("/auth/signup", post(auth::controller::signup))
         .route("/auth/signin", post(auth::controller::signin))
         .route("/auth/signin/apple", post(auth::controller::signin_apple))
+        .route("/auth/refresh", post(auth::controller::refresh))
+        .route("/auth/signout", post(auth::controller::signout))
         .route("/reminders", post(reminders::controller::create_reminder))
         .route("/reminders", get(reminders::controller::get_reminders))
         .route("/reminders/:id", get(reminders::controller::get_reminder))

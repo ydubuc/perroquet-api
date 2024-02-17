@@ -10,7 +10,7 @@ use crate::{
 use super::{
     dtos::{
         refresh_access_info_dto::RefreshAccessInfoDto, signin_apple_dto::SigninAppleDto,
-        signin_dto::SigninDto, signup_dto::SignupDto,
+        signin_dto::SigninDto, signout_dto::SignoutDto, signup_dto::SignupDto,
     },
     models::{access_info::AccessInfo, claims::AccessTokenClaims},
     util::password,
@@ -108,13 +108,11 @@ async fn signin_user(user: &User, state: &AppState) -> Result<AccessInfo, ApiErr
         return Err(ApiError::internal_server_error());
     };
 
-    let access_info = AccessInfo {
+    Ok(AccessInfo {
         access_token,
-        refresh_token: Some(device.refresh_token),
-        device_id: Some(device.id.to_string()),
-    };
-
-    Ok(access_info)
+        refresh_token: device.refresh_token,
+        device_id: device.id.to_string(),
+    })
 }
 
 pub async fn refresh(dto: &RefreshAccessInfoDto, state: &AppState) -> Result<AccessInfo, ApiError> {
@@ -129,8 +127,8 @@ pub async fn refresh(dto: &RefreshAccessInfoDto, state: &AppState) -> Result<Acc
 
             Ok(AccessInfo {
                 access_token,
-                refresh_token: Some(device.refresh_token),
-                device_id: Some(device.id.to_string()),
+                refresh_token: device.refresh_token,
+                device_id: device.id.to_string(),
             })
         }
         Err(e) => match e.code {
@@ -138,6 +136,20 @@ pub async fn refresh(dto: &RefreshAccessInfoDto, state: &AppState) -> Result<Acc
                 StatusCode::UNAUTHORIZED,
                 "Device not found or expired.",
             )),
+            _ => Err(e),
+        },
+    }
+}
+
+pub async fn signout(
+    dto: &SignoutDto,
+    claims: &AccessTokenClaims,
+    state: &AppState,
+) -> Result<(), ApiError> {
+    match devices::service::delete_device(&dto.device_id, claims, state).await {
+        Ok(_) => Ok(()),
+        Err(e) => match e.code {
+            StatusCode::NOT_FOUND => Ok(()),
             _ => Err(e),
         },
     }
