@@ -8,10 +8,7 @@ use super::{
         refresh_access_info_dto::RefreshAccessInfoDto, signin_apple_dto::SigninAppleDto,
         signin_dto::SigninDto, signout_dto::SignoutDto, signup_dto::SignupDto,
     },
-    models::{
-        access_info::AccessInfo,
-        claims::{AccessTokenClaims, ExtractClaims},
-    },
+    models::{access_info::AccessInfo, claims::ExtractClaims},
     service,
 };
 

@@ -33,7 +33,7 @@ pub async fn get_reminders(
     Query(dto): Query<GetRemindersFilterDto>,
 ) -> Result<Json<Vec<Reminder>>, ApiError> {
     dto.validate()?;
-    match service::get_reminders(&dto, &state).await {
+    match service::get_reminders(&dto, &claims, &state).await {
         Ok(data) => Ok(Json(data)),
         Err(e) => Err(e),
     }
@@ -44,7 +44,7 @@ pub async fn get_reminder(
     ExtractClaims(claims): ExtractClaims,
     Path(id): Path<String>,
 ) -> Result<Json<Reminder>, ApiError> {
-    match service::get_reminder(&id, &state).await {
+    match service::get_reminder(&id, &claims, &state).await {
         Ok(data) => Ok(Json(data)),
         Err(e) => Err(e),
     }
@@ -68,5 +68,5 @@ pub async fn delete_reminder(
     Path(id): Path<String>,
     ExtractClaims(claims): ExtractClaims,
 ) -> Result<(), ApiError> {
-    return service::delete_reminder(&id, &state).await;
+    return service::delete_reminder(&id, &claims, &state).await;
 }

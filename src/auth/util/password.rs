@@ -2,7 +2,6 @@ use argon2::{
     password_hash::{self, SaltString},
     Argon2, PasswordHash, PasswordHasher, PasswordVerifier,
 };
-use rand::{distributions::Alphanumeric, Rng};
 use tokio::task;
 
 use crate::app::models::app_error::AppError;

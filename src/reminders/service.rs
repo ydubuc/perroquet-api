@@ -54,6 +54,7 @@ pub async fn create_reminder(
 
 pub async fn get_reminders(
     dto: &GetRemindersFilterDto,
+    claims: &AccessTokenClaims,
     state: &AppState,
 ) -> Result<Vec<Reminder>, ApiError> {
     // SQL
@@ -129,7 +130,11 @@ pub async fn get_reminders(
     }
 }
 
-pub async fn get_reminder(id: &str, state: &AppState) -> Result<Reminder, ApiError> {
+pub async fn get_reminder(
+    id: &str,
+    claims: &AccessTokenClaims,
+    state: &AppState,
+) -> Result<Reminder, ApiError> {
     let sqlx_result = sqlx::query_as::<Postgres, Reminder>(
         "
         SELECT * FROM reminders
@@ -206,14 +211,19 @@ pub async fn edit_reminder(
     }
 }
 
-pub async fn delete_reminder(id: &str, state: &AppState) -> Result<(), ApiError> {
+pub async fn delete_reminder(
+    id: &str,
+    claims: &AccessTokenClaims,
+    state: &AppState,
+) -> Result<(), ApiError> {
     let sqlx_result = sqlx::query(
         "
         DELETE FROM reminders
-        WHERE id = $1
+        WHERE id = $1 AND user_id = $2
         ",
     )
     .bind(id)
+    .bind(&claims.id)
     .execute(&state.pool)
     .await;
 
