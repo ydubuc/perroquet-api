@@ -7,7 +7,7 @@ use crate::{app::util::time, users::util};
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct User {
     pub id: sqlx::types::Uuid,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing)]
     pub id_apple: Option<String>,
     pub username: String,
     #[serde(skip_serializing)]

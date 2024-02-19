@@ -3,11 +3,11 @@ use sqlx::Postgres;
 
 use crate::{
     app::{self, models::api_error::ApiError},
-    auth::dtos::signin_dto::SigninDto,
+    auth::{dtos::signin_dto::SigninDto, models::claims::AccessTokenClaims},
     AppState,
 };
 
-use super::models::user::User;
+use super::{dtos::get_users_filter_dto::GetUsersFilterDto, models::user::User};
 
 pub async fn create_user(user: User, state: &AppState) -> Result<User, ApiError> {
     let sqlx_result = sqlx::query(
@@ -59,9 +59,105 @@ pub async fn create_user(user: User, state: &AppState) -> Result<User, ApiError>
     }
 }
 
+pub async fn get_users(
+    dto: &GetUsersFilterDto,
+    claims: &AccessTokenClaims,
+    state: &AppState,
+) -> Result<Vec<User>, ApiError> {
+    // SQL
+    let mut query = "SELECT * FROM users WHERE true".to_string();
+
+    let mut sort_field = "created_at".to_string();
+    let mut sort_order = "DESC".to_string();
+    let mut page_limit: u8 = 50;
+
+    let mut index: u8 = 0;
+
+    if dto.id.is_some() {
+        index += 1;
+        query.push_str(&format!(" AND id = ${}", index))
+    }
+    if dto.search.is_some() {
+        index += 1;
+        query.push_str(&format!(
+            " AND title LIKE ${} OR content LIKE ${}",
+            index, index
+        ))
+    }
+
+    // SQL SORT
+    if let Some(sort) = &dto.sort {
+        match app::util::dto::get_sort_params(sort, None) {
+            Ok(sort_params) => {
+                sort_field = sort_params.field;
+                sort_order = sort_params.order;
+            }
+            Err(e) => return Err(e),
+        }
+
+        if let Some(cursor) = &dto.cursor {
+            match app::util::dto::get_cursor(&cursor) {
+                Ok(cursor) => {
+                    // add SQL clauses for pagination
+                }
+                Err(e) => return Err(e),
+            }
+        }
+    }
+    query.push_str(&format!(" ORDER BY users.{} {}", sort_field, sort_order));
+    if let Some(limit) = dto.limit {
+        page_limit = limit;
+    }
+    query.push_str(&format!(" LIMIT {}", page_limit));
+
+    // SQLX
+    let mut sqlx = sqlx::query_as::<Postgres, User>(&query);
+
+    if let Some(id) = &dto.id {
+        sqlx = sqlx.bind(id);
+    }
+    if let Some(search) = &dto.search {
+        sqlx = sqlx.bind(search);
+    }
+
+    let sqlx_result = sqlx.fetch_all(&state.pool).await;
+
+    match sqlx_result {
+        Ok(reminders) => Ok(reminders),
+        Err(e) => {
+            tracing::error!(%e);
+            Err(ApiError::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to get users.",
+            ))
+        }
+    }
+}
+
 pub async fn get_user_by_id(id: &str, state: &AppState) -> Result<User, ApiError> {
     let sqlx_result = sqlx::query_as::<Postgres, User>("SELECT * FROM users WHERE id = $1")
         .bind(id)
+        .fetch_optional(&state.pool)
+        .await;
+
+    match sqlx_result {
+        Ok(user) => match user {
+            Some(user) => Ok(user),
+            None => Err(ApiError::new(StatusCode::NOT_FOUND, "User not found.")),
+        },
+        Err(e) => {
+            tracing::error!(%e);
+            Err(ApiError::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to get user.",
+            ))
+        }
+    }
+}
+
+pub async fn get_user_by_id_apple(id_apple: &str, state: &AppState) -> Result<User, ApiError> {
+    let sqlx_result = sqlx::query_as::<Postgres, User>("SELECT * FROM users WHERE id_apple = $1")
+        .bind(id_apple)
         .fetch_optional(&state.pool)
         .await;
 

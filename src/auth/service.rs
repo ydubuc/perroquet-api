@@ -89,7 +89,7 @@ pub async fn signin_apple(dto: &SigninAppleDto, state: &AppState) -> Result<Acce
         return Err(ApiError::internal_server_error());
     };
 
-    match users::service::get_user_by_email(&claims.email, state).await {
+    match users::service::get_user_by_id_apple(&claims.sub, state).await {
         Ok(user) => signin_user(&user, state).await,
         Err(e) => match e.code {
             StatusCode::NOT_FOUND => signup_apple(&claims.email, &claims.sub, state).await,

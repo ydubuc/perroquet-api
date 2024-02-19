@@ -70,7 +70,6 @@ pub async fn get_reminders(
         index += 1;
         query.push_str(&format!(" AND id = ${}", index));
     }
-
     if dto.search.is_some() {
         index += 1;
         query.push_str(&format!(" AND content LIKE ${}", index));
@@ -95,12 +94,10 @@ pub async fn get_reminders(
             }
         }
     }
-
     query.push_str(&format!(
         " ORDER BY reminders.{} {}",
         sort_field, sort_order
     ));
-
     if let Some(limit) = dto.limit {
         page_limit = limit;
     }
