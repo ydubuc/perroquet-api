@@ -53,7 +53,7 @@ pub async fn refresh_device(refresh_token: &str, state: &AppState) -> Result<Dev
 
     let sqlx_result = sqlx::query_as::<Postgres, Device>(
         "
-        UPDATE devices SET refresh_token = $1 refreshed_at = $2 updated_at = $3
+        UPDATE devices SET refresh_token = $1, refreshed_at = $2, updated_at = $3
         WHERE refresh_token = $4 RETURNING *
         ",
     )
@@ -92,7 +92,7 @@ pub async fn edit_device(
 
     if dto.messaging_token.is_some() {
         index += 1;
-        query.push_str(&format!("messaging_token = ${} ", index));
+        query.push_str(&format!("messaging_token = ${}, ", index));
     }
 
     index += 1;

@@ -170,7 +170,7 @@ pub async fn edit_reminder(
 
     if dto.content.is_some() {
         index += 1;
-        query.push_str(&format!("content = ${} ", index));
+        query.push_str(&format!("content = ${}, ", index));
     }
 
     index += 1;
