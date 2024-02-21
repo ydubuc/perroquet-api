@@ -14,7 +14,7 @@ use crate::{
         models::{api_error::ApiError, app_error::AppError},
         util::time,
     },
-    auth::config::JWT_EXP,
+    auth::{config::JWT_EXP, enums::pepper_type::PepperType},
     AppState,
 };
 
@@ -58,7 +58,11 @@ impl AccessTokenClaims {
         }
     }
 
-    fn from_headers(headers: &HeaderMap, secret: &str) -> Result<Self, ApiError> {
+    fn from_headers(
+        headers: &HeaderMap,
+        secret: &str,
+        pepper: Option<&str>,
+    ) -> Result<Self, ApiError> {
         let Some(header_value) = headers.get(AUTHORIZATION) else {
             return Err(ApiError::new(
                 StatusCode::UNAUTHORIZED,
@@ -81,7 +85,7 @@ impl AccessTokenClaims {
             ));
         }
 
-        AccessTokenClaims::from_jwt(split[1], secret, None, true)
+        AccessTokenClaims::from_jwt(split[1], secret, pepper, true)
     }
 
     pub fn from_jwt(
@@ -128,8 +132,83 @@ where
         let state = parts.extract_with_state::<AppState, _>(state).await?;
         let headers = &parts.headers;
 
-        match AccessTokenClaims::from_headers(headers, &state.envy.jwt_secret) {
+        match AccessTokenClaims::from_headers(headers, &state.envy.jwt_secret, None) {
             Ok(claims) => Ok(ExtractClaims(claims)),
+            Err(e) => Err(e),
+        }
+    }
+}
+
+pub struct ExtractClaimsPepperVerifyEmail(pub AccessTokenClaims);
+
+#[async_trait]
+impl<S> FromRequestParts<S> for ExtractClaimsPepperVerifyEmail
+where
+    AppState: FromRef<S>,
+    S: Send + Sync,
+{
+    type Rejection = ApiError;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let state = parts.extract_with_state::<AppState, _>(state).await?;
+        let headers = &parts.headers;
+
+        match AccessTokenClaims::from_headers(
+            headers,
+            &state.envy.jwt_secret,
+            Some(PepperType::VERIFY_EMAIL),
+        ) {
+            Ok(claims) => Ok(ExtractClaimsPepperVerifyEmail(claims)),
+            Err(e) => Err(e),
+        }
+    }
+}
+
+pub struct ExtractClaimsPepperEditEmail(pub AccessTokenClaims);
+
+#[async_trait]
+impl<S> FromRequestParts<S> for ExtractClaimsPepperEditEmail
+where
+    AppState: FromRef<S>,
+    S: Send + Sync,
+{
+    type Rejection = ApiError;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let state = parts.extract_with_state::<AppState, _>(state).await?;
+        let headers = &parts.headers;
+
+        match AccessTokenClaims::from_headers(
+            headers,
+            &state.envy.jwt_secret,
+            Some(PepperType::EDIT_EMAIL),
+        ) {
+            Ok(claims) => Ok(ExtractClaimsPepperEditEmail(claims)),
+            Err(e) => Err(e),
+        }
+    }
+}
+
+pub struct ExtractClaimsPepperEditPassword(pub AccessTokenClaims);
+
+#[async_trait]
+impl<S> FromRequestParts<S> for ExtractClaimsPepperEditPassword
+where
+    AppState: FromRef<S>,
+    S: Send + Sync,
+{
+    type Rejection = ApiError;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let state = parts.extract_with_state::<AppState, _>(state).await?;
+        let headers = &parts.headers;
+
+        match AccessTokenClaims::from_headers(
+            headers,
+            &state.envy.jwt_secret,
+            Some(PepperType::EDIT_PASSWORD),
+        ) {
+            Ok(claims) => Ok(ExtractClaimsPepperEditPassword(claims)),
             Err(e) => Err(e),
         }
     }

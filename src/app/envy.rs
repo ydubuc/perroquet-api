@@ -17,4 +17,10 @@ pub struct Envy {
     pub fcm_project_name: String,
     pub fcm_client_email: String,
     pub fcm_private_key: String,
+
+    pub mail_port: u16,
+    pub mail_host: String,
+    pub mail_from: String,
+    pub mail_user: String,
+    pub mail_pass: String,
 }

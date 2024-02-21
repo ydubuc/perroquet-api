@@ -3,7 +3,10 @@ use std::borrow::Cow;
 use regex::Regex;
 use validator::ValidationError;
 
+pub mod edit_password_dto;
 pub mod refresh_access_info_dto;
+pub mod request_email_update_dto;
+pub mod request_password_update_dto;
 pub mod signin_apple_dto;
 pub mod signin_dto;
 pub mod signout_dto;

@@ -5,10 +5,15 @@ use crate::{app::models::api_error::ApiError, AppState};
 
 use super::{
     dtos::{
-        refresh_access_info_dto::RefreshAccessInfoDto, signin_apple_dto::SigninAppleDto,
+        edit_password_dto::EditPasswordDto, refresh_access_info_dto::RefreshAccessInfoDto,
+        request_email_update_dto::RequestEmailUpdateDto,
+        request_password_update_dto::RequestPasswordUpdateDto, signin_apple_dto::SigninAppleDto,
         signin_dto::SigninDto, signout_dto::SignoutDto, signup_dto::SignupDto,
     },
-    models::{access_info::AccessInfo, claims::ExtractClaims},
+    models::{
+        access_info::AccessInfo,
+        claims::{ExtractClaims, ExtractClaimsPepperEditEmail, ExtractClaimsPepperEditPassword},
+    },
     service,
 };
 
@@ -63,4 +68,37 @@ pub async fn signout(
 ) -> Result<(), ApiError> {
     dto.validate()?;
     service::signout(&dto, &claims, &state).await
+}
+
+pub async fn request_email_update(
+    State(state): State<AppState>,
+    ExtractClaims(claims): ExtractClaims,
+    Json(dto): Json<RequestEmailUpdateDto>,
+) -> Result<(), ApiError> {
+    dto.validate()?;
+    service::request_email_update(&dto, &claims, &state).await
+}
+
+pub async fn process_email_update(
+    State(state): State<AppState>,
+    ExtractClaimsPepperEditEmail(claims): ExtractClaimsPepperEditEmail,
+) -> Result<(), ApiError> {
+    service::process_email_update(&claims, &state).await
+}
+
+pub async fn request_password_update(
+    State(state): State<AppState>,
+    Json(dto): Json<RequestPasswordUpdateDto>,
+) -> Result<(), ApiError> {
+    dto.validate()?;
+    service::request_password_update(&dto, &state).await
+}
+
+pub async fn edit_password(
+    State(state): State<AppState>,
+    ExtractClaimsPepperEditPassword(claims): ExtractClaimsPepperEditPassword,
+    Json(dto): Json<EditPasswordDto>,
+) -> Result<(), ApiError> {
+    dto.validate()?;
+    service::edit_password(&dto, &claims, &state).await
 }

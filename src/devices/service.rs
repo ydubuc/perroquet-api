@@ -100,7 +100,10 @@ pub async fn get_devices(
             }
         }
     }
-    query.push_str(&format!(" ORDER BY {}, id {}", sort_field, sort_order));
+    query.push_str(&format!(
+        " ORDER BY {} {}, id {}",
+        sort_field, sort_order, sort_order
+    ));
     if let Some(limit) = dto.limit {
         page_limit = limit;
     }

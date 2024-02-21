@@ -3,15 +3,22 @@ use axum::http::StatusCode;
 use crate::{
     app::models::api_error::ApiError,
     devices,
+    mail::{
+        self,
+        templates::{request_email_update_template, request_password_update_template},
+    },
     users::{self, models::user::User},
     AppState,
 };
 
 use super::{
     dtos::{
-        refresh_access_info_dto::RefreshAccessInfoDto, signin_apple_dto::SigninAppleDto,
+        edit_password_dto::EditPasswordDto, refresh_access_info_dto::RefreshAccessInfoDto,
+        request_email_update_dto::RequestEmailUpdateDto,
+        request_password_update_dto::RequestPasswordUpdateDto, signin_apple_dto::SigninAppleDto,
         signin_dto::SigninDto, signout_dto::SignoutDto, signup_dto::SignupDto,
     },
+    enums::pepper_type::PepperType,
     models::{access_info::AccessInfo, claims::AccessTokenClaims},
     util::password,
 };
@@ -153,4 +160,68 @@ pub async fn signout(
             _ => Err(e),
         },
     }
+}
+
+pub async fn request_email_update(
+    dto: &RequestEmailUpdateDto,
+    claims: &AccessTokenClaims,
+    state: &AppState,
+) -> Result<(), ApiError> {
+    if let Ok(_) = users::service::get_user_by_email(&dto.new_email, state).await {
+        return Err(ApiError::new(StatusCode::CONFLICT, "Email already exists."));
+    }
+
+    users::service::edit_user_email_pending(&claims.id, &dto.new_email, state).await?;
+
+    let id = claims.id.clone();
+    let envy = state.envy.clone();
+    let new_email = dto.new_email.clone();
+
+    tokio::spawn(async move {
+        let temp_claims = AccessTokenClaims::new(&id);
+        let Ok(access_token) = temp_claims.to_jwt(&envy.jwt_secret, Some(PepperType::EDIT_EMAIL))
+        else {
+            return;
+        };
+        let mail_template = request_email_update_template::new(&access_token);
+        let _ = mail::service::send(&new_email, &mail_template.0, &mail_template.1, &envy).await;
+    });
+
+    Ok(())
+}
+
+pub async fn process_email_update(
+    claims: &AccessTokenClaims,
+    state: &AppState,
+) -> Result<(), ApiError> {
+    return users::service::approve_user_email_pending(&claims.id, state).await;
+}
+
+pub async fn request_password_update(
+    dto: &RequestPasswordUpdateDto,
+    state: &AppState,
+) -> Result<(), ApiError> {
+    let user = users::service::get_user_by_email(&dto.email, state).await?;
+    let envy = state.envy.clone();
+
+    tokio::spawn(async move {
+        let temp_claims = AccessTokenClaims::new(&user.id.to_string());
+        let Ok(access_token) =
+            temp_claims.to_jwt(&envy.jwt_secret, Some(PepperType::EDIT_PASSWORD))
+        else {
+            return;
+        };
+        let mail_template = request_password_update_template::new(&access_token);
+        let _ = mail::service::send(&user.email, &mail_template.0, &mail_template.1, &envy).await;
+    });
+
+    Ok(())
+}
+
+pub async fn edit_password(
+    dto: &EditPasswordDto,
+    claims: &AccessTokenClaims,
+    state: &AppState,
+) -> Result<(), ApiError> {
+    return users::service::edit_user_password(&claims.id, &dto.password, state).await;
 }

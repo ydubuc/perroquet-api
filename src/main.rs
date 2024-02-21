@@ -20,6 +20,7 @@ use crate::{
 mod app;
 mod auth;
 mod devices;
+mod mail;
 mod reminders;
 mod users;
 
@@ -106,6 +107,13 @@ async fn main() {
         .route("/auth/signin/apple", post(auth::controller::signin_apple))
         .route("/auth/refresh", post(auth::controller::refresh))
         .route("/auth/signout", post(auth::controller::signout))
+        .route("/auth/email", post(auth::controller::request_email_update))
+        .route("/auth/email", patch(auth::controller::process_email_update))
+        .route(
+            "/auth/password",
+            post(auth::controller::request_password_update),
+        )
+        .route("/auth/password", patch(auth::controller::edit_password))
         .route("/devices", get(devices::controller::get_devices))
         .route("/devices/:id", patch(devices::controller::edit_device))
         .route("/users", get(users::controller::get_users))

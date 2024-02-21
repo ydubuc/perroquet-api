@@ -3,7 +3,7 @@ use sqlx::Postgres;
 
 use crate::{
     app::{self, models::api_error::ApiError},
-    auth::{dtos::signin_dto::SigninDto, models::claims::AccessTokenClaims},
+    auth::{dtos::signin_dto::SigninDto, models::claims::AccessTokenClaims, util::password},
     AppState,
 };
 
@@ -229,6 +229,93 @@ pub async fn get_user_by_email(email: &str, state: &AppState) -> Result<User, Ap
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to get user.",
             ))
+        }
+    }
+}
+
+pub async fn edit_user_email_pending(
+    id: &str,
+    email_pending: &str,
+    state: &AppState,
+) -> Result<(), ApiError> {
+    let sqlx_result = sqlx::query(
+        "
+        UPDATE users SET email_pending = $1
+        WHERE id = $2
+        ",
+    )
+    .bind(email_pending)
+    .bind(id)
+    .execute(&state.pool)
+    .await;
+
+    match sqlx_result {
+        Ok(result) => match result.rows_affected() > 0 {
+            true => Ok(()),
+            false => Err(ApiError::new(StatusCode::NOT_FOUND, "User not found.")),
+        },
+        Err(e) => {
+            tracing::error!(%e);
+            Err(ApiError::internal_server_error())
+        }
+    }
+}
+
+pub async fn approve_user_email_pending(id: &str, state: &AppState) -> Result<(), ApiError> {
+    let sqlx_result = sqlx::query(
+        "
+        UPDATE users
+        SET email = email_pending, email_key = LOWER(email_pending), email_pending = NULL
+        WHERE id = $1 AND email_pending IS NOT NULL
+        ",
+    )
+    .bind(id)
+    .execute(&state.pool)
+    .await;
+
+    match sqlx_result {
+        Ok(result) => match result.rows_affected() > 0 {
+            true => Ok(()),
+            false => Err(ApiError::new(
+                StatusCode::NOT_FOUND,
+                "Failed to approve user email.",
+            )),
+        },
+        Err(e) => {
+            tracing::error!(%e);
+            Err(ApiError::internal_server_error())
+        }
+    }
+}
+
+pub async fn edit_user_password(
+    id: &str,
+    new_password: &str,
+    state: &AppState,
+) -> Result<(), ApiError> {
+    let Ok(password_hash) = password::hash(new_password.to_string()).await else {
+        return Err(ApiError::internal_server_error());
+    };
+
+    let sqlx_result = sqlx::query(
+        "
+        UPDATE users SET password = $1
+        WHERE id = $2
+        ",
+    )
+    .bind(&password_hash)
+    .bind(id)
+    .execute(&state.pool)
+    .await;
+
+    match sqlx_result {
+        Ok(result) => match result.rows_affected() > 0 {
+            true => Ok(()),
+            false => Err(ApiError::new(StatusCode::NOT_FOUND, "User not found.")),
+        },
+        Err(e) => {
+            tracing::error!(%e);
+            Err(ApiError::internal_server_error())
         }
     }
 }

@@ -19,6 +19,8 @@ openssl = { version = "0.10", features = ["vendored"] }
 
 reqwest = { version = "0.11.24", features = ["json"] }
 
+lettre = { version = "0.11.4", features = ["tokio1-rustls-tls", "tokio1-native-tls"] }
+
 jsonwebtoken = "9.2.0"
 argon2 = "0.5.3"
 
