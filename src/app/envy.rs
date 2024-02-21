@@ -13,4 +13,8 @@ pub struct Envy {
     pub apple_client_id: String,
     pub apple_key_id: String,
     pub apple_private_key: String,
+
+    pub fcm_project_name: String,
+    pub fcm_client_email: String,
+    pub fcm_private_key: String,
 }

@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 use crate::{
     app::{
+        self,
         models::{api_error::ApiError, app_state::AppState},
         util::time,
     },
@@ -11,7 +12,10 @@ use crate::{
     users::models::user::User,
 };
 
-use super::{dtos::edit_device_dto::EditDeviceDto, models::device::Device};
+use super::{
+    dtos::{edit_device_dto::EditDeviceDto, get_devices_filter_dto::GetDevicesFilterDto},
+    models::device::Device,
+};
 
 pub async fn create_device(user: &User, state: &AppState) -> Result<Device, ApiError> {
     let device = Device::new(user);
@@ -42,6 +46,85 @@ pub async fn create_device(user: &User, state: &AppState) -> Result<Device, ApiE
             Err(ApiError::new(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to create device.",
+            ))
+        }
+    }
+}
+
+pub async fn get_devices(
+    dto: &GetDevicesFilterDto,
+    claims: Option<&AccessTokenClaims>,
+    state: &AppState,
+) -> Result<Vec<Device>, ApiError> {
+    // SQL
+    let mut query = "SELECT * FROM devices WHERE true".to_string();
+
+    let mut sort_field = "refreshed_at".to_string();
+    let mut sort_order = "DESC".to_string();
+    let mut page_limit: u8 = 80;
+
+    let mut index: u8 = 0;
+
+    if claims.is_some() {
+        index += 1;
+        query.push_str(&format!(" AND user_id = ${}", index));
+    }
+    if dto.id.is_some() {
+        index += 1;
+        query.push_str(&format!(" AND id = ${}", index));
+    }
+
+    // SQL SORT
+    if let Some(sort) = &dto.sort {
+        match app::util::dto::get_sort_params(sort, None) {
+            Ok(sort_params) => {
+                sort_field = sort_params.field;
+                sort_order = sort_params.order;
+            }
+            Err(e) => return Err(e),
+        }
+
+        if let Some(cursor) = &dto.cursor {
+            match app::util::dto::get_cursor(&cursor) {
+                Ok(cursor) => {
+                    let carrot_sign = match sort_order.as_ref() {
+                        "DESC" => "<",
+                        _ => ">",
+                    };
+                    query.push_str(&format!(
+                        " AND ({}, id) {} ({}, '{}')",
+                        sort_field, carrot_sign, cursor.value, cursor.id
+                    ))
+                }
+                Err(e) => return Err(e),
+            }
+        }
+    }
+    query.push_str(&format!(" ORDER BY {}, id {}", sort_field, sort_order));
+    if let Some(limit) = dto.limit {
+        page_limit = limit;
+    }
+    query.push_str(&format!(" LIMIT {}", page_limit));
+
+    // SQLX
+    let mut sqlx = sqlx::query_as::<Postgres, Device>(&query);
+
+    if let Some(claims) = claims {
+        sqlx = sqlx.bind(&claims.id);
+    }
+    if let Some(id) = &dto.id {
+        sqlx = sqlx.bind(id)
+    }
+
+    let sqlx_result = sqlx.fetch_all(&state.pool).await;
+
+    match sqlx_result {
+        Ok(devices) => Ok(devices),
+        Err(e) => {
+            tracing::error!(%e);
+            Err(ApiError::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to get devices.",
             ))
         }
     }

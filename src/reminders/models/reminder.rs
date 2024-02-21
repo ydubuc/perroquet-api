@@ -9,13 +9,13 @@ use crate::{
     reminders::dtos::create_reminder_dto::CreateReminderDto,
 };
 
-#[derive(Debug, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Reminder {
     pub id: sqlx::types::Uuid,
     pub user_id: sqlx::types::Uuid,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
-    pub content: String,
+    pub body: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub frequency: Option<String>,
     pub trigger_at: i64,
@@ -31,7 +31,7 @@ impl Reminder {
             id: Uuid::new_v4(),
             user_id: Uuid::from_str(&claims.id).unwrap(),
             title: dto.title.clone(),
-            content: dto.content.trim().to_string(),
+            body: dto.body.trim().to_string(),
             frequency: dto.frequency.clone(),
             trigger_at: dto.trigger_at,
             updated_at: current_time,

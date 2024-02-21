@@ -12,9 +12,9 @@ pub struct CreateReminderDto {
     #[validate(length(
         min = 1,
         max = 65535,
-        message = "content must be between 1 and 65535 characters."
+        message = "body must be between 1 and 65535 characters."
     ))]
-    pub content: String,
+    pub body: String,
     pub frequency: Option<String>,
     pub trigger_at: i64,
 }

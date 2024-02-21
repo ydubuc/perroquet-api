@@ -12,9 +12,9 @@ pub struct EditReminderDto {
     #[validate(length(
         min = 1,
         max = 65535,
-        message = "content must be between 1 and 65535 characters."
+        message = "body must be between 1 and 65535 characters."
     ))]
-    pub content: Option<String>,
+    pub body: Option<String>,
     pub frequency: Option<String>,
     pub trigger_at: Option<i64>,
 }

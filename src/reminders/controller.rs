@@ -33,7 +33,7 @@ pub async fn get_reminders(
     Query(dto): Query<GetRemindersFilterDto>,
 ) -> Result<Json<Vec<Reminder>>, ApiError> {
     dto.validate()?;
-    match service::get_reminders(&dto, &claims, &state).await {
+    match service::get_reminders(&dto, Some(&claims), &state).await {
         Ok(data) => Ok(Json(data)),
         Err(e) => Err(e),
     }

@@ -26,7 +26,7 @@ CREATE TABLE reminders(
     id UUID PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title TEXT,
-    content TEXT NOT NULL,
+    body TEXT NOT NULL,
     frequency TEXT,
     trigger_at BIGINT NOT NULL,
     updated_at BIGINT NOT NULL,

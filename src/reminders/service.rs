@@ -25,14 +25,14 @@ pub async fn create_reminder(
     let sqlx_result = sqlx::query(
         "
         INSERT INTO reminders
-        (id, user_id, title, content, frequency, trigger_at, updated_at, created_at)
+        (id, user_id, title, body, frequency, trigger_at, updated_at, created_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         ",
     )
     .bind(&reminder.id)
     .bind(&claims.id)
     .bind(&reminder.title)
-    .bind(&reminder.content)
+    .bind(&reminder.body)
     .bind(&reminder.frequency)
     .bind(&reminder.trigger_at)
     .bind(&reminder.updated_at)
@@ -54,7 +54,7 @@ pub async fn create_reminder(
 
 pub async fn get_reminders(
     dto: &GetRemindersFilterDto,
-    claims: &AccessTokenClaims,
+    claims: Option<&AccessTokenClaims>,
     state: &AppState,
 ) -> Result<Vec<Reminder>, ApiError> {
     // SQL
@@ -66,13 +66,17 @@ pub async fn get_reminders(
 
     let mut index: u8 = 0;
 
+    if claims.is_some() {
+        index += 1;
+        query.push_str(&format!(" AND user_id = ${}", index));
+    }
     if dto.id.is_some() {
         index += 1;
         query.push_str(&format!(" AND id = ${}", index));
     }
     if dto.search.is_some() {
         index += 1;
-        query.push_str(&format!(" AND content LIKE ${}", index));
+        query.push_str(&format!(" AND body LIKE ${}", index));
     }
 
     // SQL SORT
@@ -88,24 +92,36 @@ pub async fn get_reminders(
         if let Some(cursor) = &dto.cursor {
             match app::util::dto::get_cursor(&cursor) {
                 Ok(cursor) => {
-                    // add SQL clauses for pagination
+                    let carrot_sign = match sort_order.as_ref() {
+                        "DESC" => "<",
+                        _ => ">",
+                    };
+                    query.push_str(&format!(
+                        " AND ({}, id) {} ({}, '{}')",
+                        sort_field, carrot_sign, cursor.value, cursor.id
+                    ))
                 }
                 Err(e) => return Err(e),
             }
         }
     }
     query.push_str(&format!(
-        " ORDER BY reminders.{} {}",
-        sort_field, sort_order
+        " ORDER BY {} {}, id {}",
+        sort_field, sort_order, sort_order
     ));
     if let Some(limit) = dto.limit {
         page_limit = limit;
     }
     query.push_str(&format!(" LIMIT {}", page_limit));
 
+    tracing::debug!("{:?}", query);
+
     // SQLX
     let mut sqlx = sqlx::query_as::<Postgres, Reminder>(&query);
 
+    if let Some(claims) = claims {
+        sqlx = sqlx.bind(&claims.id);
+    }
     if let Some(id) = &dto.id {
         sqlx = sqlx.bind(id);
     }
@@ -168,9 +184,9 @@ pub async fn edit_reminder(
 
     let mut index: u8 = 0;
 
-    if dto.content.is_some() {
+    if dto.body.is_some() {
         index += 1;
-        query.push_str(&format!("content = ${}, ", index));
+        query.push_str(&format!("body = ${}, ", index));
     }
 
     index += 1;
@@ -184,8 +200,8 @@ pub async fn edit_reminder(
     // SQLX
     let mut sqlx = sqlx::query_as::<Postgres, Reminder>(&query);
 
-    if let Some(content) = &dto.content {
-        sqlx = sqlx.bind(content);
+    if let Some(body) = &dto.body {
+        sqlx = sqlx.bind(body);
     }
     sqlx = sqlx.bind(time::current_time_in_millis());
     sqlx = sqlx.bind(id);

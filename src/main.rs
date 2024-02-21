@@ -10,7 +10,10 @@ use tokio::sync::RwLock;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::{
-    app::models::app_state::AppState,
+    app::{
+        fcm::{self, client::FcmClient},
+        models::app_state::AppState,
+    },
     auth::apple::{self, client::AppleAuthClient},
 };
 
@@ -62,7 +65,21 @@ async fn main() {
         .await
         .expect("failed to login to apple_client");
 
-    let authman = AuthMan::new(Arc::new(RwLock::new(apple_client)));
+    let fcm_config = fcm::models::client_config::ClientConfig {
+        project_name: envy.fcm_project_name.to_owned(),
+        client_email: envy.fcm_client_email.to_owned(),
+        private_key: envy.fcm_private_key.to_owned(),
+    };
+    let mut fcm_client = FcmClient::new(fcm_config);
+    fcm_client
+        .login(&http_client)
+        .await
+        .expect("failed to login to fcm_client");
+
+    let authman = AuthMan::new(
+        Arc::new(RwLock::new(apple_client)),
+        Arc::new(RwLock::new(fcm_client)),
+    );
 
     let pool = PgPoolOptions::new()
         .max_connections(10)
@@ -79,6 +96,8 @@ async fn main() {
         pool,
     };
 
+    // reminders::polo::spawn(app_state.clone());
+
     // app
     let app = Router::new()
         .route("/", get(app::controller::get_root))
@@ -87,6 +106,8 @@ async fn main() {
         .route("/auth/signin/apple", post(auth::controller::signin_apple))
         .route("/auth/refresh", post(auth::controller::refresh))
         .route("/auth/signout", post(auth::controller::signout))
+        .route("/devices", get(devices::controller::get_devices))
+        .route("/devices/:id", patch(devices::controller::edit_device))
         .route("/users", get(users::controller::get_users))
         .route("/users/me", get(users::controller::get_me))
         .route("/reminders", post(reminders::controller::create_reminder))
