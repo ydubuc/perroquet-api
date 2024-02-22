@@ -25,8 +25,8 @@ pub async fn create_reminder(
     let sqlx_result = sqlx::query(
         "
         INSERT INTO reminders
-        (id, user_id, title, body, frequency, trigger_at, updated_at, created_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        (id, user_id, title, body, frequency, visibility, trigger_at, updated_at, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         ",
     )
     .bind(&reminder.id)
@@ -34,6 +34,7 @@ pub async fn create_reminder(
     .bind(&reminder.title)
     .bind(&reminder.body)
     .bind(&reminder.frequency)
+    .bind(&reminder.visibility)
     .bind(&reminder.trigger_at)
     .bind(&reminder.updated_at)
     .bind(&reminder.created_at)
@@ -66,10 +67,6 @@ pub async fn get_reminders(
 
     let mut index: u8 = 0;
 
-    if claims.is_some() {
-        index += 1;
-        query.push_str(&format!(" AND user_id = ${}", index));
-    }
     if dto.id.is_some() {
         index += 1;
         query.push_str(&format!(" AND id = ${}", index));
@@ -77,6 +74,10 @@ pub async fn get_reminders(
     if dto.search.is_some() {
         index += 1;
         query.push_str(&format!(" AND body LIKE ${}", index));
+    }
+    if dto.visibility.is_some() {
+        index += 1;
+        query.push_str(&format!(" AND visibility = ${}", index));
     }
 
     // SQL SORT
@@ -119,14 +120,14 @@ pub async fn get_reminders(
     // SQLX
     let mut sqlx = sqlx::query_as::<Postgres, Reminder>(&query);
 
-    if let Some(claims) = claims {
-        sqlx = sqlx.bind(&claims.id);
-    }
     if let Some(id) = &dto.id {
         sqlx = sqlx.bind(id);
     }
     if let Some(search) = &dto.search {
         sqlx = sqlx.bind(search);
+    }
+    if let Some(visibility) = &dto.visibility {
+        sqlx = sqlx.bind(visibility);
     }
 
     let sqlx_result = sqlx.fetch_all(&state.pool).await;
@@ -188,6 +189,10 @@ pub async fn edit_reminder(
         index += 1;
         query.push_str(&format!("body = ${}, ", index));
     }
+    if dto.visibility.is_some() {
+        index += 1;
+        query.push_str(&format!("visibility = ${}", index));
+    }
 
     index += 1;
     query.push_str(&format!("updated_at = ${} ", index));
@@ -202,6 +207,9 @@ pub async fn edit_reminder(
 
     if let Some(body) = &dto.body {
         sqlx = sqlx.bind(body);
+    }
+    if let Some(visibility) = &dto.visibility {
+        sqlx = sqlx.bind(visibility);
     }
     sqlx = sqlx.bind(time::current_time_in_millis());
     sqlx = sqlx.bind(id);

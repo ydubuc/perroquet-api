@@ -18,6 +18,7 @@ pub struct Reminder {
     pub body: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub frequency: Option<String>,
+    pub visibility: i16,
     pub trigger_at: i64,
     pub updated_at: i64,
     pub created_at: i64,
@@ -33,6 +34,7 @@ impl Reminder {
             title: dto.title.clone(),
             body: dto.body.trim().to_string(),
             frequency: dto.frequency.clone(),
+            visibility: dto.visibility,
             trigger_at: dto.trigger_at,
             updated_at: current_time,
             created_at: current_time,

@@ -16,5 +16,6 @@ pub struct CreateReminderDto {
     ))]
     pub body: String,
     pub frequency: Option<String>,
+    pub visibility: i16,
     pub trigger_at: i64,
 }

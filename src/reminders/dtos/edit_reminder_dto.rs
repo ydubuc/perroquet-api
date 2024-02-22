@@ -16,5 +16,6 @@ pub struct EditReminderDto {
     ))]
     pub body: Option<String>,
     pub frequency: Option<String>,
+    pub visibility: Option<i16>,
     pub trigger_at: Option<i64>,
 }

@@ -29,6 +29,7 @@ CREATE TABLE reminders(
     title TEXT,
     body TEXT NOT NULL,
     frequency TEXT,
+    visibility SMALLINT NOT NULL,
     trigger_at BIGINT NOT NULL,
     updated_at BIGINT NOT NULL,
     created_at BIGINT NOT NULL

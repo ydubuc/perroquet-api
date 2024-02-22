@@ -34,6 +34,7 @@ async fn poll_reminders(state: &AppState) {
         id: None,
         user_id: None,
         search: None,
+        visibility: None,
         sort: Some("trigger_at,asc".to_string()),
         cursor: Some(format!(
             "{},{}",

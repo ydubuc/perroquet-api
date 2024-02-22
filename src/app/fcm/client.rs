@@ -106,6 +106,7 @@ impl FcmClient {
                 "apns": {
                     "payload": {
                         "aps": {
+                            "sound": "default",
                             "category": click_action
                         }
                     }
