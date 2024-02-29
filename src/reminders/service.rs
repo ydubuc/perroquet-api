@@ -191,7 +191,7 @@ pub async fn edit_reminder(
     }
     if dto.visibility.is_some() {
         index += 1;
-        query.push_str(&format!("visibility = ${}", index));
+        query.push_str(&format!("visibility = ${}, ", index));
     }
 
     index += 1;
