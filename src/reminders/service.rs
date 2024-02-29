@@ -189,9 +189,17 @@ pub async fn edit_reminder(
         index += 1;
         query.push_str(&format!("body = ${}, ", index));
     }
+    if dto.frequency.is_some() {
+        index += 1;
+        query.push_str(&format!("frequency = ${}, ", index));
+    }
     if dto.visibility.is_some() {
         index += 1;
         query.push_str(&format!("visibility = ${}, ", index));
+    }
+    if dto.trigger_at.is_some() {
+        index += 1;
+        query.push_str(&format!("trigger_at = ${}, ", index));
     }
 
     index += 1;
@@ -208,8 +216,14 @@ pub async fn edit_reminder(
     if let Some(body) = &dto.body {
         sqlx = sqlx.bind(body);
     }
+    if let Some(frequency) = &dto.frequency {
+        sqlx = sqlx.bind(frequency);
+    }
     if let Some(visibility) = &dto.visibility {
         sqlx = sqlx.bind(visibility);
+    }
+    if let Some(trigger_at) = &dto.trigger_at {
+        sqlx = sqlx.bind(trigger_at);
     }
     sqlx = sqlx.bind(time::current_time_in_millis());
     sqlx = sqlx.bind(id);
