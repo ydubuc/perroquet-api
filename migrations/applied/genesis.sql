@@ -26,8 +26,9 @@ CREATE TABLE devices(
 CREATE TABLE reminders(
     id UUID PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    title TEXT,
-    body TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    tags TEXT[],
     frequency TEXT,
     visibility SMALLINT NOT NULL,
     trigger_at BIGINT NOT NULL,

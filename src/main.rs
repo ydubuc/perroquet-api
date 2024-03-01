@@ -97,8 +97,6 @@ async fn main() {
         pool,
     };
 
-    // reminders::polo::spawn(app_state.clone());
-
     // app
     let app = Router::new()
         .route("/", get(app::controller::get_root))

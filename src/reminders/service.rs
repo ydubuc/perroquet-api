@@ -25,14 +25,15 @@ pub async fn create_reminder(
     let sqlx_result = sqlx::query(
         "
         INSERT INTO reminders
-        (id, user_id, title, body, frequency, visibility, trigger_at, updated_at, created_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        (id, user_id, title, description, tags, frequency, visibility, trigger_at, updated_at, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         ",
     )
     .bind(&reminder.id)
     .bind(&claims.id)
     .bind(&reminder.title)
-    .bind(&reminder.body)
+    .bind(&reminder.description)
+    .bind(&reminder.tags)
     .bind(&reminder.frequency)
     .bind(&reminder.visibility)
     .bind(&reminder.trigger_at)
@@ -61,7 +62,7 @@ pub async fn get_reminders(
     // SQL
     let mut query = "SELECT * FROM reminders WHERE true".to_string();
 
-    let mut sort_field = "created_at".to_string();
+    let mut sort_field = "trigger_at".to_string();
     let mut sort_order = "DESC".to_string();
     let mut page_limit: u8 = 80;
 
@@ -73,7 +74,17 @@ pub async fn get_reminders(
     }
     if dto.search.is_some() {
         index += 1;
-        query.push_str(&format!(" AND body LIKE ${}", index));
+        query.push_str(&format!(" AND title LIKE ${}", index));
+    }
+    if dto.tags.is_some() {
+        let mut tags = dto.tags.clone().unwrap();
+
+        for val in &mut tags {
+            index += 1;
+            *val = format!("${}", index);
+        }
+
+        query.push_str(&format!(" AND tags @> ARRAY[{}]", tags.join(",")));
     }
     if dto.visibility.is_some() {
         index += 1;
@@ -125,6 +136,11 @@ pub async fn get_reminders(
     }
     if let Some(search) = &dto.search {
         sqlx = sqlx.bind(search);
+    }
+    if let Some(tags) = &dto.tags {
+        for tag in tags {
+            sqlx = sqlx.bind(tag);
+        }
     }
     if let Some(visibility) = &dto.visibility {
         sqlx = sqlx.bind(visibility);
@@ -185,9 +201,17 @@ pub async fn edit_reminder(
 
     let mut index: u8 = 0;
 
-    if dto.body.is_some() {
+    if dto.title.is_some() {
         index += 1;
-        query.push_str(&format!("body = ${}, ", index));
+        query.push_str(&format!("title = ${}, ", index));
+    }
+    if dto.description.is_some() {
+        index += 1;
+        query.push_str(&format!("description = ${}, ", index));
+    }
+    if dto.tags.is_some() {
+        index += 1;
+        query.push_str(&format!("tags = ${}, ", index));
     }
     if dto.frequency.is_some() {
         index += 1;
@@ -213,8 +237,14 @@ pub async fn edit_reminder(
     // SQLX
     let mut sqlx = sqlx::query_as::<Postgres, Reminder>(&query);
 
-    if let Some(body) = &dto.body {
-        sqlx = sqlx.bind(body);
+    if let Some(title) = &dto.title {
+        sqlx = sqlx.bind(title)
+    }
+    if let Some(description) = &dto.description {
+        sqlx = sqlx.bind(description);
+    }
+    if let Some(tags) = &dto.tags {
+        sqlx = sqlx.bind(tags);
     }
     if let Some(frequency) = &dto.frequency {
         sqlx = sqlx.bind(frequency);

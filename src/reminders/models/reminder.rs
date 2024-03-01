@@ -13,9 +13,11 @@ use crate::{
 pub struct Reminder {
     pub id: sqlx::types::Uuid,
     pub user_id: sqlx::types::Uuid,
+    pub title: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub title: Option<String>,
-    pub body: String,
+    pub description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tags: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub frequency: Option<String>,
     pub visibility: i16,
@@ -31,8 +33,12 @@ impl Reminder {
         Self {
             id: Uuid::new_v4(),
             user_id: Uuid::from_str(&claims.id).unwrap(),
-            title: dto.title.clone(),
-            body: dto.body.trim().to_string(),
+            title: dto.title.trim().to_string(),
+            description: match &dto.description {
+                Some(description) => Some(description.trim().to_string()),
+                None => None,
+            },
+            tags: dto.tags.clone(),
             frequency: dto.frequency.clone(),
             visibility: dto.visibility,
             trigger_at: dto.trigger_at,
