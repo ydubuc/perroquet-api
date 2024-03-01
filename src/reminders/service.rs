@@ -77,14 +77,18 @@ pub async fn get_reminders(
         query.push_str(&format!(" AND title LIKE ${}", index));
     }
     if dto.tags.is_some() {
-        let mut tags = dto.tags.clone().unwrap();
+        let tags = dto.tags.clone().unwrap();
+        let mut values = String::new();
 
-        for val in &mut tags {
+        for (i, value) in tags.split(',').enumerate() {
             index += 1;
-            *val = format!("${}", index);
+            if i != 0 {
+                values.push_str(", ");
+            }
+            values.push_str(&format!("${}", index));
         }
 
-        query.push_str(&format!(" AND tags @> ARRAY[{}]", tags.join(",")));
+        query.push_str(&format!(" AND tags @> ARRAY[{}]", values));
     }
     if dto.visibility.is_some() {
         index += 1;
@@ -138,7 +142,7 @@ pub async fn get_reminders(
         sqlx = sqlx.bind(search);
     }
     if let Some(tags) = &dto.tags {
-        for tag in tags {
+        for tag in tags.split(",") {
             sqlx = sqlx.bind(tag);
         }
     }
