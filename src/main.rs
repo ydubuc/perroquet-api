@@ -99,32 +99,47 @@ async fn main() {
 
     // app
     let app = Router::new()
-        .route("/", get(app::controller::get_root))
-        .route("/auth/signup", post(auth::controller::signup))
-        .route("/auth/signin", post(auth::controller::signin))
-        .route("/auth/signin/apple", post(auth::controller::signin_apple))
-        .route("/auth/refresh", post(auth::controller::refresh))
-        .route("/auth/signout", post(auth::controller::signout))
-        .route("/auth/email", post(auth::controller::request_email_update))
-        .route("/auth/email", patch(auth::controller::process_email_update))
+        .route("/v1/", get(app::controller::get_root))
+        .route("/v1/auth/signup", post(auth::controller::signup))
+        .route("/v1/auth/signin", post(auth::controller::signin))
         .route(
-            "/auth/password",
+            "/v1/auth/signin/apple",
+            post(auth::controller::signin_apple),
+        )
+        .route("/v1/auth/refresh", post(auth::controller::refresh))
+        .route("/v1/auth/signout", post(auth::controller::signout))
+        .route(
+            "/v1/auth/email",
+            post(auth::controller::request_email_update),
+        )
+        .route(
+            "/v1/auth/email",
+            patch(auth::controller::process_email_update),
+        )
+        .route(
+            "/v1/auth/password",
             post(auth::controller::request_password_update),
         )
-        .route("/auth/password", patch(auth::controller::edit_password))
-        .route("/devices", get(devices::controller::get_devices))
-        .route("/devices/:id", patch(devices::controller::edit_device))
-        .route("/users", get(users::controller::get_users))
-        .route("/users/me", get(users::controller::get_me))
-        .route("/reminders", post(reminders::controller::create_reminder))
-        .route("/reminders", get(reminders::controller::get_reminders))
-        .route("/reminders/:id", get(reminders::controller::get_reminder))
+        .route("/v1/auth/password", patch(auth::controller::edit_password))
+        .route("/v1/devices", get(devices::controller::get_devices))
+        .route("/v1/devices/:id", patch(devices::controller::edit_device))
+        .route("/v1/users", get(users::controller::get_users))
+        .route("/v1/users/me", get(users::controller::get_me))
         .route(
-            "/reminders/:id",
+            "/v1/reminders",
+            post(reminders::controller::create_reminder),
+        )
+        .route("/v1/reminders", get(reminders::controller::get_reminders))
+        .route(
+            "/v1/reminders/:id",
+            get(reminders::controller::get_reminder),
+        )
+        .route(
+            "/v1/reminders/:id",
             patch(reminders::controller::edit_reminder),
         )
         .route(
-            "/reminders/:id",
+            "/v1/reminders/:id",
             delete(reminders::controller::delete_reminder),
         )
         .with_state(app_state);
