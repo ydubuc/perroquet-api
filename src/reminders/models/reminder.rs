@@ -31,7 +31,7 @@ impl Reminder {
         let current_time = app::util::time::current_time_in_millis();
 
         Self {
-            id: Uuid::new_v4(),
+            id: Uuid::from_str(&dto.id).unwrap(),
             user_id: Uuid::from_str(&claims.id).unwrap(),
             title: dto.title.trim().to_string(),
             description: match &dto.description {

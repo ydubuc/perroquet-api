@@ -3,6 +3,8 @@ use validator::Validate;
 
 #[derive(Debug, Serialize, Deserialize, Validate)]
 pub struct CreateReminderDto {
+    #[validate(custom = "super::validate_uuid")]
+    pub id: String,
     #[validate(length(
         min = 1,
         max = 512,
