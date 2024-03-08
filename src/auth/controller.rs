@@ -5,9 +5,10 @@ use axum::{
     response::Response,
     Json,
 };
-use axum_extra::extract::{
-    cookie::{Cookie, SameSite},
-    CookieJar,
+use axum_extra::extract::CookieJar;
+use cookie::{
+    time::{Duration, OffsetDateTime},
+    Cookie, SameSite,
 };
 use validator::Validate;
 
@@ -30,11 +31,15 @@ use super::{
 };
 
 fn cookified_access_info_response(access_info: AccessInfo) -> Response {
+    let mut now = OffsetDateTime::now_utc();
+    now += Duration::weeks(52);
+
     let mut refresh_token_cookie = Cookie::new("refresh_token", access_info.refresh_token.clone());
     refresh_token_cookie.set_same_site(SameSite::Lax);
     refresh_token_cookie.set_http_only(true);
     refresh_token_cookie.set_secure(true);
     refresh_token_cookie.set_path("/v1/auth/refresh");
+    refresh_token_cookie.set_expires(now);
 
     let mut response = Response::builder();
     let headers = response.headers_mut().unwrap();
