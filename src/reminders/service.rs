@@ -3,7 +3,7 @@ use sqlx::Postgres;
 
 use crate::{
     app::{self, models::api_error::ApiError, util::time},
-    auth::models::claims::AccessTokenClaims,
+    auth::models::access_token_claims::AccessTokenClaims,
     AppState,
 };
 

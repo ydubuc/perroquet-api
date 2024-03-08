@@ -1,4 +1,14 @@
-use axum::{extract::State, Json};
+use axum::{
+    body::Body,
+    extract::State,
+    http::{HeaderValue, StatusCode},
+    response::Response,
+    Json,
+};
+use axum_extra::extract::{
+    cookie::{Cookie, SameSite},
+    CookieJar,
+};
 use validator::Validate;
 
 use crate::{app::models::api_error::ApiError, AppState};
@@ -12,18 +22,43 @@ use super::{
     },
     models::{
         access_info::AccessInfo,
-        claims::{ExtractClaims, ExtractClaimsPepperEditEmail, ExtractClaimsPepperEditPassword},
+        access_token_claims::{
+            ExtractClaims, ExtractClaimsPepperEditEmail, ExtractClaimsPepperEditPassword,
+        },
     },
     service,
 };
 
+fn cookified_access_info_response(access_info: AccessInfo) -> Response {
+    let mut refresh_token_cookie = Cookie::new("refresh_token", access_info.refresh_token.clone());
+    refresh_token_cookie.set_same_site(SameSite::Lax);
+    refresh_token_cookie.set_http_only(true);
+    refresh_token_cookie.set_secure(true);
+    refresh_token_cookie.set_path("/v1/auth/refresh");
+
+    let mut response = Response::builder();
+    let headers = response.headers_mut().unwrap();
+    headers.insert(
+        "Content-Type",
+        HeaderValue::from_str("application/json").unwrap(),
+    );
+    headers.insert(
+        "Set-Cookie",
+        HeaderValue::from_str(&refresh_token_cookie.to_string()).unwrap(),
+    );
+
+    response
+        .body(Body::from(serde_json::to_vec(&access_info).unwrap()))
+        .unwrap()
+}
+
 pub async fn signup(
     State(state): State<AppState>,
     Json(dto): Json<SignupDto>,
-) -> Result<Json<AccessInfo>, ApiError> {
+) -> Result<Response, ApiError> {
     dto.validate()?;
     match service::signup(&dto, &state).await {
-        Ok(data) => Ok(Json(data)),
+        Ok(data) => Ok(cookified_access_info_response(data)),
         Err(e) => Err(e),
     }
 }
@@ -31,10 +66,10 @@ pub async fn signup(
 pub async fn signin(
     State(state): State<AppState>,
     Json(dto): Json<SigninDto>,
-) -> Result<Json<AccessInfo>, ApiError> {
+) -> Result<Response, ApiError> {
     dto.validate()?;
     match service::signin(&dto, &state).await {
-        Ok(data) => Ok(Json(data)),
+        Ok(data) => Ok(cookified_access_info_response(data)),
         Err(e) => Err(e),
     }
 }
@@ -42,22 +77,41 @@ pub async fn signin(
 pub async fn signin_apple(
     State(state): State<AppState>,
     Json(dto): Json<SigninAppleDto>,
-) -> Result<Json<AccessInfo>, ApiError> {
+) -> Result<Response, ApiError> {
     dto.validate()?;
     match service::signin_apple(&dto, &state).await {
-        Ok(data) => Ok(Json(data)),
+        Ok(data) => Ok(cookified_access_info_response(data)),
         Err(e) => Err(e),
     }
 }
 
 pub async fn refresh(
     State(state): State<AppState>,
-    Json(dto): Json<RefreshAccessInfoDto>,
-) -> Result<Json<AccessInfo>, ApiError> {
-    dto.validate()?;
-    match service::refresh(&dto, &state).await {
-        Ok(data) => Ok(Json(data)),
-        Err(e) => Err(e),
+    jar: CookieJar,
+    Json(dto): Json<Option<RefreshAccessInfoDto>>,
+) -> Result<Response, ApiError> {
+    if let Some(dto) = dto {
+        dto.validate()?;
+        tracing::debug!("received dto from body");
+        match service::refresh(&dto, &state).await {
+            Ok(data) => Ok(cookified_access_info_response(data)),
+            Err(e) => Err(e),
+        }
+    } else if let Some(refresh_token) = jar.get("refresh_token") {
+        tracing::debug!("received dto from cookie");
+        let dto = RefreshAccessInfoDto {
+            refresh_token: refresh_token.value().to_string(),
+        };
+        match service::refresh(&dto, &state).await {
+            Ok(data) => Ok(cookified_access_info_response(data)),
+            Err(e) => Err(e),
+        }
+    } else {
+        tracing::debug!("received no dto at all");
+        Err(ApiError::new(
+            StatusCode::UNAUTHORIZED,
+            "Missing refresh token.",
+        ))
     }
 }
 

@@ -5,7 +5,7 @@ use sqlx::FromRow;
 use uuid::Uuid;
 
 use crate::{
-    app, auth::models::claims::AccessTokenClaims,
+    app, auth::models::access_token_claims::AccessTokenClaims,
     reminders::dtos::create_reminder_dto::CreateReminderDto,
 };
 

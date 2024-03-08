@@ -2,11 +2,16 @@ use std::{env, sync::Arc, time::Duration};
 
 use auth::authman::AuthMan;
 use axum::{
+    http::{
+        header::{AUTHORIZATION, CONTENT_TYPE},
+        HeaderValue, Method,
+    },
     routing::{delete, get, patch, post},
     Router,
 };
 use sqlx::postgres::PgPoolOptions;
 use tokio::sync::RwLock;
+use tower_http::cors::{self, CorsLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::{
@@ -51,7 +56,13 @@ async fn main() {
         .init();
 
     // properties
-    let port = envy.port.to_owned().unwrap_or(3000);
+    let port = envy.port.to_owned().unwrap_or(3001);
+    let cors = CorsLayer::new()
+        .allow_origin("http://localhost:3000".parse::<HeaderValue>().unwrap())
+        .allow_credentials(true)
+        // .allow_headers(cors::Any)
+        .allow_headers([AUTHORIZATION, CONTENT_TYPE])
+        .allow_methods([Method::POST, Method::GET, Method::PATCH, Method::DELETE]);
     let http_client = reqwest::Client::new();
 
     let apple_config = apple::models::client_config::ClientConfig {
@@ -142,6 +153,7 @@ async fn main() {
             "/v1/reminders/:id",
             delete(reminders::controller::delete_reminder),
         )
+        .layer(cors)
         .with_state(app_state);
 
     let addr = format!("0.0.0.0:{}", port);

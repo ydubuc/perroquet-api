@@ -19,7 +19,7 @@ use super::{
         signin_dto::SigninDto, signout_dto::SignoutDto, signup_dto::SignupDto,
     },
     enums::pepper_type::PepperType,
-    models::{access_info::AccessInfo, claims::AccessTokenClaims},
+    models::{access_info::AccessInfo, access_token_claims::AccessTokenClaims},
     util::password,
 };
 

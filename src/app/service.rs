@@ -1,5 +1,5 @@
 use crate::{
-    auth::models::claims::AccessTokenClaims, reminders::models::reminder::Reminder,
+    auth::models::access_token_claims::AccessTokenClaims, reminders::models::reminder::Reminder,
     users::models::user::User, AppState,
 };
 

@@ -8,7 +8,7 @@ use crate::{
         models::{api_error::ApiError, app_state::AppState},
         util::time,
     },
-    auth::models::claims::AccessTokenClaims,
+    auth::models::access_token_claims::AccessTokenClaims,
     users::models::user::User,
 };
 

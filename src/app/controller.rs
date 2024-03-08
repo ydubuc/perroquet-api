@@ -1,7 +1,7 @@
 use axum::{extract::State, Json};
 use validator::Validate;
 
-use crate::{auth::models::claims::ExtractClaims, AppState};
+use crate::{auth::models::access_token_claims::ExtractClaims, AppState};
 
 use super::{
     dtos::sync_dto::SyncDto,

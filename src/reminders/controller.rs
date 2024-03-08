@@ -4,7 +4,9 @@ use axum::{
 };
 use validator::Validate;
 
-use crate::{app::models::api_error::ApiError, auth::models::claims::ExtractClaims, AppState};
+use crate::{
+    app::models::api_error::ApiError, auth::models::access_token_claims::ExtractClaims, AppState,
+};
 
 use super::{
     dtos::{

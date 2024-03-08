@@ -3,7 +3,9 @@ use sqlx::Postgres;
 
 use crate::{
     app::{self, models::api_error::ApiError},
-    auth::{dtos::signin_dto::SigninDto, models::claims::AccessTokenClaims, util::password},
+    auth::{
+        dtos::signin_dto::SigninDto, models::access_token_claims::AccessTokenClaims, util::password,
+    },
     AppState,
 };
 

@@ -6,7 +6,7 @@ use validator::Validate;
 
 use crate::{
     app::models::{api_error::ApiError, app_state::AppState},
-    auth::models::claims::ExtractClaims,
+    auth::models::access_token_claims::ExtractClaims,
 };
 
 use super::{
