@@ -58,7 +58,11 @@ async fn main() {
     // properties
     let port = envy.port.to_owned().unwrap_or(3001);
     let cors = CorsLayer::new()
-        .allow_origin("http://localhost:3000".parse::<HeaderValue>().unwrap())
+        .allow_origin(
+            "https://perroquet.beamcove.com"
+                .parse::<HeaderValue>()
+                .unwrap(),
+        )
         .allow_credentials(true)
         // .allow_headers(cors::Any)
         .allow_headers([AUTHORIZATION, CONTENT_TYPE])
