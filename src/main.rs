@@ -11,7 +11,7 @@ use axum::{
 };
 use sqlx::postgres::PgPoolOptions;
 use tokio::sync::RwLock;
-use tower_http::cors::{self, CorsLayer};
+use tower_http::cors::CorsLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::{
@@ -63,8 +63,8 @@ async fn main() {
                 .parse::<HeaderValue>()
                 .unwrap(),
         )
+        .allow_origin("http://localhost:3000".parse::<HeaderValue>().unwrap())
         .allow_credentials(true)
-        // .allow_headers(cors::Any)
         .allow_headers([AUTHORIZATION, CONTENT_TYPE])
         .allow_methods([Method::POST, Method::GET, Method::PATCH, Method::DELETE]);
     let http_client = reqwest::Client::new();
