@@ -85,10 +85,21 @@ impl AppleAuthClient {
     pub async fn validate_auth_code(
         &self,
         auth_code: &str,
+        client_type: Option<String>,
         http_client: &reqwest::Client,
     ) -> Result<AppleAuthCodeResponse, ApiError> {
+        let mut client_id = self.config.client_id.to_string();
+        if let Some(client_type) = client_type {
+            let extension = match client_type.as_ref() {
+                "web" => ".Web",
+                "android" => ".Android",
+                &_ => "",
+            };
+            client_id.push_str(extension)
+        }
+
         let mut form = HashMap::new();
-        form.insert("client_id", self.config.client_id.to_string());
+        form.insert("client_id", client_id);
         form.insert("client_secret", self.client_secret.to_string());
         form.insert("code", auth_code.to_string());
         form.insert("grant_type", "authorization_code".to_string());
