@@ -6,7 +6,7 @@ use axum::{
         header::{AUTHORIZATION, CONTENT_TYPE},
         HeaderValue, Method,
     },
-    routing::{delete, get, patch, post},
+    routing::{get, patch, post},
     Router,
 };
 use sqlx::postgres::PgPoolOptions;
