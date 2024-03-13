@@ -18,7 +18,9 @@ use super::{
 #[derive(Debug, Clone)]
 pub struct AppleAuthClient {
     pub config: ClientConfig,
-    client_secret: String,
+    client_secret_ios: String,
+    client_secret_android: String,
+    client_secret_web: String,
     pub public_keys: Vec<PublicKey>,
     refreshed_at: Instant,
 }
@@ -27,7 +29,9 @@ impl AppleAuthClient {
     pub fn new(config: ClientConfig) -> Self {
         Self {
             config,
-            client_secret: String::new(),
+            client_secret_ios: String::new(),
+            client_secret_android: String::new(),
+            client_secret_web: String::new(),
             public_keys: Vec::new(),
             refreshed_at: Instant::now(),
         }
@@ -38,26 +42,33 @@ impl AppleAuthClient {
     }
 
     pub async fn login(&mut self, http_client: &reqwest::Client) -> Result<(), AppError> {
-        let current_time_in_secs = app::util::time::current_time_in_secs();
-        let claims = serde_json::json!(ClientClaims {
-            iss: self.config.team_id.to_string(),
-            sub: self.config.client_id.to_string(),
-            aud: "https://appleid.apple.com".to_string(),
-            iat: current_time_in_secs,
-            exp: current_time_in_secs + 3600,
-        });
-        let Ok(encoding_key) = EncodingKey::from_ec_pem(self.config.private_key.as_bytes()) else {
-            return Err(AppError::new(
-                "auth::util::apple::client failed to encode private key",
-            ));
-        };
-        let mut header = Header::new(Algorithm::ES256);
-        header.kid = Some(self.config.key_id.to_string());
-        let Ok(client_secret) = encode(&header, &claims, &encoding_key) else {
-            return Err(AppError::new(
-                "auth::util::apple::client failed to encode claims",
-            ));
-        };
+        // let current_time_in_secs = app::util::time::current_time_in_secs();
+        // let claims = serde_json::json!(ClientClaims {
+        //     iss: self.config.team_id.to_string(),
+        //     sub: self.config.client_id.to_string(),
+        //     aud: "https://appleid.apple.com".to_string(),
+        //     iat: current_time_in_secs,
+        //     exp: current_time_in_secs + 3600,
+        // });
+        // let Ok(encoding_key) = EncodingKey::from_ec_pem(self.config.private_key.as_bytes()) else {
+        //     return Err(AppError::new(
+        //         "auth::util::apple::client failed to encode private key",
+        //     ));
+        // };
+        // let mut header = Header::new(Algorithm::ES256);
+        // header.kid = Some(self.config.key_id.to_string());
+        // let Ok(client_secret) = encode(&header, &claims, &encoding_key) else {
+        //     return Err(AppError::new(
+        //         "auth::util::apple::client failed to encode claims",
+        //     ));
+        // };
+
+        let client_secret_ios =
+            Self::generate_client_secret(self.config.clone(), "ios".to_string())?;
+        let client_secret_web =
+            Self::generate_client_secret(self.config.clone(), "web".to_string())?;
+        let client_secret_android =
+            Self::generate_client_secret(self.config.clone(), "android".to_string())?;
 
         let result = http_client
             .get("https://appleid.apple.com/auth/keys")
@@ -75,32 +86,73 @@ impl AppleAuthClient {
             return Err(AppError::new("failed to decode public keys from text"));
         };
 
-        self.client_secret = client_secret;
+        self.client_secret_ios = client_secret_ios;
+        self.client_secret_android = client_secret_android;
+        self.client_secret_web = client_secret_web;
         self.public_keys = apple_public_keys_res.keys;
         self.refreshed_at = Instant::now();
 
         Ok(())
     }
 
+    fn generate_client_secret(
+        config: ClientConfig,
+        client_type: String,
+    ) -> Result<String, AppError> {
+        let client_id = match client_type.as_ref() {
+            "ios" => config.client_id.clone(),
+            "web" => format!("{}{}", config.client_id, ".Web"),
+            "android" => format!("{}{}", config.client_id, ".Android"),
+            _ => config.client_id.clone(),
+        };
+
+        let current_time_in_secs = app::util::time::current_time_in_secs();
+        let claims = serde_json::json!(ClientClaims {
+            iss: config.team_id.to_string(),
+            sub: client_id,
+            aud: "https://appleid.apple.com".to_string(),
+            iat: current_time_in_secs,
+            exp: current_time_in_secs + 3600,
+        });
+        let Ok(encoding_key) = EncodingKey::from_ec_pem(config.private_key.as_bytes()) else {
+            return Err(AppError::new(
+                "auth::util::apple::client failed to encode private key",
+            ));
+        };
+        let mut header = Header::new(Algorithm::ES256);
+        header.kid = Some(config.key_id.to_string());
+        let Ok(client_secret) = encode(&header, &claims, &encoding_key) else {
+            return Err(AppError::new(
+                "auth::util::apple::client failed to encode claims",
+            ));
+        };
+
+        Ok(client_secret)
+    }
+
     pub async fn validate_auth_code(
         &self,
         auth_code: &str,
-        client_type: Option<String>,
+        client_type: String,
         http_client: &reqwest::Client,
     ) -> Result<AppleAuthCodeResponse, ApiError> {
-        let mut client_id = self.config.client_id.to_string();
-        if let Some(client_type) = client_type {
-            let extension = match client_type.as_ref() {
-                "web" => ".Web",
-                "android" => ".Android",
-                &_ => "",
-            };
-            client_id.push_str(extension)
-        }
+        let client_id = match client_type.as_ref() {
+            "ios" => format!("{}", self.config.client_id),
+            "android" => format!("{}.Android", self.config.client_id),
+            "web" => format!("{}.Web", self.config.client_id),
+            _ => self.config.client_id.clone(),
+        };
+
+        let client_secret = match client_type.as_ref() {
+            "ios" => &self.client_secret_ios,
+            "android" => &self.client_secret_android,
+            "web" => &self.client_secret_web,
+            _ => &self.client_secret_ios,
+        };
 
         let mut form = HashMap::new();
         form.insert("client_id", client_id);
-        form.insert("client_secret", self.client_secret.to_string());
+        form.insert("client_secret", client_secret.to_string());
         form.insert("code", auth_code.to_string());
         form.insert("grant_type", "authorization_code".to_string());
 

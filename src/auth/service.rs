@@ -87,7 +87,11 @@ pub async fn signin_apple(dto: &SigninAppleDto, state: &AppState) -> Result<Acce
     let _apple_client = state.authman.apple_client(&state.http_client).await;
     let apple_client = _apple_client.read().await;
     let auth_code_res = apple_client
-        .validate_auth_code(&dto.auth_code, dto.client.clone(), &state.http_client)
+        .validate_auth_code(
+            &dto.auth_code,
+            dto.client.clone().unwrap_or("ios".to_string()),
+            &state.http_client,
+        )
         .await?;
 
     let Ok(claims) =
