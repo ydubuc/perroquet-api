@@ -6,28 +6,29 @@ use uuid::Uuid;
 
 use crate::{
     app, auth::models::access_token_claims::AccessTokenClaims,
-    reminders::dtos::create_reminder_dto::CreateReminderDto,
+    memos::dtos::create_memo_dto::CreateMemoDto,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct Reminder {
+pub struct Memo {
     pub id: sqlx::types::Uuid,
     pub user_id: sqlx::types::Uuid,
     pub title: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub tags: Option<Vec<String>>,
+    pub priority: Option<String>,
+    pub status: String,
+    pub visibility: i16,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub frequency: Option<String>,
-    pub visibility: i16,
     pub trigger_at: i64,
     pub updated_at: i64,
     pub created_at: i64,
 }
 
-impl Reminder {
-    pub fn new(dto: &CreateReminderDto, claims: &AccessTokenClaims) -> Self {
+impl Memo {
+    pub fn new(dto: &CreateMemoDto, claims: &AccessTokenClaims) -> Self {
         let current_time = app::util::time::current_time_in_millis();
 
         Self {
@@ -38,9 +39,10 @@ impl Reminder {
                 Some(description) => Some(description.trim().to_string()),
                 None => None,
             },
-            tags: dto.tags.clone(),
-            frequency: dto.frequency.clone(),
+            priority: dto.priority.clone(),
+            status: "pending".to_string(),
             visibility: dto.visibility,
+            frequency: dto.frequency.clone(),
             trigger_at: dto.trigger_at,
             updated_at: current_time,
             created_at: current_time,

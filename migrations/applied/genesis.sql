@@ -23,14 +23,15 @@ CREATE TABLE devices(
     created_at BIGINT NOT NULL
 );
 
-CREATE TABLE reminders(
+CREATE TABLE memos(
     id UUID PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
     description TEXT,
-    tags TEXT[],
-    frequency TEXT,
+    priority TEXT,
+    status TEXT NOT NULL,
     visibility SMALLINT NOT NULL,
+    frequency TEXT,
     trigger_at BIGINT NOT NULL,
     updated_at BIGINT NOT NULL,
     created_at BIGINT NOT NULL

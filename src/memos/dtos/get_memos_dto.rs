@@ -2,11 +2,12 @@ use serde::{Deserialize, Serialize};
 use validator::Validate;
 
 #[derive(Debug, Serialize, Deserialize, Validate)]
-pub struct GetRemindersFilterDto {
+pub struct GetMemosDto {
     pub id: Option<String>,
     pub user_id: Option<String>,
     pub search: Option<String>,
-    pub tags: Option<String>,
+    pub priority: Option<String>,
+    pub status: Option<String>,
     pub visibility: Option<i16>,
     pub sort: Option<String>,
     pub cursor: Option<String>,

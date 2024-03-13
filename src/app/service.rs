@@ -1,5 +1,5 @@
 use crate::{
-    auth::models::access_token_claims::AccessTokenClaims, reminders::models::reminder::Reminder,
+    auth::models::access_token_claims::AccessTokenClaims, memos::models::memo::Memo,
     users::models::user::User, AppState,
 };
 
@@ -19,7 +19,7 @@ pub async fn sync(
     state: &AppState,
 ) -> Result<SyncData, ApiError> {
     let mut user: Option<User> = None;
-    let mut reminders: Option<Vec<Reminder>> = None;
+    let mut memos: Option<Vec<Memo>> = None;
 
-    Ok(SyncData { user, reminders })
+    Ok(SyncData { user, memos })
 }

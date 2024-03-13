@@ -3,9 +3,9 @@ use std::borrow::Cow;
 use uuid::Uuid;
 use validator::ValidationError;
 
-pub mod create_reminder_dto;
-pub mod edit_reminder_dto;
-pub mod get_reminders_filter_dto;
+pub mod create_memo_dto;
+pub mod edit_memo_dto;
+pub mod get_memos_dto;
 
 pub fn validate_uuid(value: &str) -> Result<(), ValidationError> {
     match Uuid::parse_str(value).is_ok() {

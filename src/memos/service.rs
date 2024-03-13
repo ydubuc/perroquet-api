@@ -9,86 +9,79 @@ use crate::{
 
 use super::{
     dtos::{
-        create_reminder_dto::CreateReminderDto, edit_reminder_dto::EditReminderDto,
-        get_reminders_filter_dto::GetRemindersFilterDto,
+        create_memo_dto::CreateMemoDto, edit_memo_dto::EditMemoDto, get_memos_dto::GetMemosDto,
     },
-    models::reminder::Reminder,
+    models::memo::Memo,
 };
 
-pub async fn create_reminder(
-    dto: &CreateReminderDto,
+pub async fn create_memo(
+    dto: &CreateMemoDto,
     claims: &AccessTokenClaims,
     state: &AppState,
-) -> Result<Reminder, ApiError> {
-    let reminder = Reminder::new(dto, claims);
+) -> Result<Memo, ApiError> {
+    let memo = Memo::new(dto, claims);
 
     let sqlx_result = sqlx::query(
         "
-        INSERT INTO reminders
-        (id, user_id, title, description, tags, frequency, visibility, trigger_at, updated_at, created_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        INSERT INTO memos
+        (id, user_id, title, description, priority, status, visibility, frequency, trigger_at, updated_at, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         ",
     )
-    .bind(&reminder.id)
+    .bind(&memo.id)
     .bind(&claims.id)
-    .bind(&reminder.title)
-    .bind(&reminder.description)
-    .bind(&reminder.tags)
-    .bind(&reminder.frequency)
-    .bind(&reminder.visibility)
-    .bind(&reminder.trigger_at)
-    .bind(&reminder.updated_at)
-    .bind(&reminder.created_at)
+    .bind(&memo.title)
+    .bind(&memo.description)
+    .bind(&memo.priority)
+    .bind(&memo.status)
+    .bind(&memo.visibility)
+    .bind(&memo.frequency)
+    .bind(&memo.trigger_at)
+    .bind(&memo.updated_at)
+    .bind(&memo.created_at)
     .execute(&state.pool)
     .await;
 
     match sqlx_result {
-        Ok(_) => Ok(reminder),
+        Ok(_) => Ok(memo),
         Err(e) => {
             tracing::error!(%e);
             Err(ApiError::new(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to create reminder.",
+                "Failed to create memo.",
             ))
         }
     }
 }
 
-pub async fn get_reminders(
-    dto: &GetRemindersFilterDto,
+pub async fn get_memos(
+    dto: &GetMemosDto,
     claims: Option<&AccessTokenClaims>,
     state: &AppState,
-) -> Result<Vec<Reminder>, ApiError> {
+) -> Result<Vec<Memo>, ApiError> {
     // SQL
-    let mut query = "SELECT * FROM reminders WHERE true".to_string();
-
-    let mut sort_field = "trigger_at".to_string();
-    let mut sort_order = "DESC".to_string();
-    let mut page_limit: u8 = 80;
-
+    let mut query = "SELECT * FROM memos WHERE true".to_string();
     let mut index: u8 = 0;
 
     if dto.id.is_some() {
         index += 1;
         query.push_str(&format!(" AND id = ${}", index));
     }
+    if dto.user_id.is_some() {
+        index += 1;
+        query.push_str(&format!(" AND user_id = ${}", index));
+    }
     if dto.search.is_some() {
         index += 1;
         query.push_str(&format!(" AND title LIKE ${}", index));
     }
-    if dto.tags.is_some() {
-        let tags = dto.tags.clone().unwrap();
-        let mut values = String::new();
-
-        for (i, value) in tags.split(',').enumerate() {
-            index += 1;
-            if i != 0 {
-                values.push_str(", ");
-            }
-            values.push_str(&format!("${}", index));
-        }
-
-        query.push_str(&format!(" AND tags @> ARRAY[{}]", values));
+    if dto.priority.is_some() {
+        index += 1;
+        query.push_str(&format!(" AND priority = ${}", index));
+    }
+    if dto.status.is_some() {
+        index += 1;
+        query.push_str(&format!(" AND status = ${}", index));
     }
     if dto.visibility.is_some() {
         index += 1;
@@ -96,6 +89,10 @@ pub async fn get_reminders(
     }
 
     // SQL SORT
+    let mut sort_field = "trigger_at".to_string();
+    let mut sort_order = "DESC".to_string();
+    let limit = dto.limit.unwrap_or(100);
+
     if let Some(sort) = &dto.sort {
         match app::util::dto::get_sort_params(sort, None) {
             Ok(sort_params) => {
@@ -125,26 +122,27 @@ pub async fn get_reminders(
         " ORDER BY {} {}, id {}",
         sort_field, sort_order, sort_order
     ));
-    if let Some(limit) = dto.limit {
-        page_limit = limit;
-    }
-    query.push_str(&format!(" LIMIT {}", page_limit));
+    query.push_str(&format!(" LIMIT {}", limit));
 
     tracing::debug!("{:?}", query);
 
     // SQLX
-    let mut sqlx = sqlx::query_as::<Postgres, Reminder>(&query);
+    let mut sqlx = sqlx::query_as::<Postgres, Memo>(&query);
 
     if let Some(id) = &dto.id {
         sqlx = sqlx.bind(id);
     }
+    if let Some(user_id) = &dto.user_id {
+        sqlx = sqlx.bind(user_id);
+    }
     if let Some(search) = &dto.search {
         sqlx = sqlx.bind(search);
     }
-    if let Some(tags) = &dto.tags {
-        for tag in tags.split(",") {
-            sqlx = sqlx.bind(tag);
-        }
+    if let Some(priority) = &dto.priority {
+        sqlx = sqlx.bind(priority)
+    }
+    if let Some(status) = &dto.status {
+        sqlx = sqlx.bind(status);
     }
     if let Some(visibility) = &dto.visibility {
         sqlx = sqlx.bind(visibility);
@@ -153,25 +151,25 @@ pub async fn get_reminders(
     let sqlx_result = sqlx.fetch_all(&state.pool).await;
 
     match sqlx_result {
-        Ok(reminders) => Ok(reminders),
+        Ok(memos) => Ok(memos),
         Err(e) => {
             tracing::error!(%e);
             Err(ApiError::new(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to get reminders.",
+                "Failed to get memos.",
             ))
         }
     }
 }
 
-pub async fn get_reminder(
+pub async fn get_memo(
     id: &str,
     claims: &AccessTokenClaims,
     state: &AppState,
-) -> Result<Reminder, ApiError> {
-    let sqlx_result = sqlx::query_as::<Postgres, Reminder>(
+) -> Result<Memo, ApiError> {
+    let sqlx_result = sqlx::query_as::<Postgres, Memo>(
         "
-        SELECT * FROM reminders
+        SELECT * FROM memos
         WHERE id = $1
         ",
     )
@@ -180,29 +178,28 @@ pub async fn get_reminder(
     .await;
 
     match sqlx_result {
-        Ok(reminder) => match reminder {
-            Some(reminder) => Ok(reminder),
-            None => Err(ApiError::new(StatusCode::NOT_FOUND, "Reminder not found.")),
+        Ok(data) => match data {
+            Some(memo) => Ok(memo),
+            None => Err(ApiError::new(StatusCode::NOT_FOUND, "Memo not found.")),
         },
         Err(e) => {
             tracing::error!(%e);
             Err(ApiError::new(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to get reminder.",
+                "Failed to get memo.",
             ))
         }
     }
 }
 
-pub async fn edit_reminder(
+pub async fn edit_memo(
     id: &str,
-    dto: &EditReminderDto,
+    dto: &EditMemoDto,
     claims: &AccessTokenClaims,
     state: &AppState,
-) -> Result<Reminder, ApiError> {
+) -> Result<Memo, ApiError> {
     // SQL
-    let mut query = "UPDATE reminders SET ".to_string();
-
+    let mut query = "UPDATE memos SET ".to_string();
     let mut index: u8 = 0;
 
     if dto.title.is_some() {
@@ -213,17 +210,21 @@ pub async fn edit_reminder(
         index += 1;
         query.push_str(&format!("description = ${}, ", index));
     }
-    if dto.tags.is_some() {
+    if dto.priority.is_some() {
         index += 1;
-        query.push_str(&format!("tags = ${}, ", index));
+        query.push_str(&format!("priority = ${}, ", index));
     }
-    if dto.frequency.is_some() {
+    if dto.status.is_some() {
         index += 1;
-        query.push_str(&format!("frequency = ${}, ", index));
+        query.push_str(&format!("status = ${}, ", index));
     }
     if dto.visibility.is_some() {
         index += 1;
         query.push_str(&format!("visibility = ${}, ", index));
+    }
+    if dto.frequency.is_some() {
+        index += 1;
+        query.push_str(&format!("frequency = ${}, ", index));
     }
     if dto.trigger_at.is_some() {
         index += 1;
@@ -239,7 +240,7 @@ pub async fn edit_reminder(
     query.push_str("RETURNING *");
 
     // SQLX
-    let mut sqlx = sqlx::query_as::<Postgres, Reminder>(&query);
+    let mut sqlx = sqlx::query_as::<Postgres, Memo>(&query);
 
     if let Some(title) = &dto.title {
         sqlx = sqlx.bind(title)
@@ -247,14 +248,17 @@ pub async fn edit_reminder(
     if let Some(description) = &dto.description {
         sqlx = sqlx.bind(description);
     }
-    if let Some(tags) = &dto.tags {
-        sqlx = sqlx.bind(tags);
+    if let Some(priority) = &dto.priority {
+        sqlx = sqlx.bind(priority);
     }
-    if let Some(frequency) = &dto.frequency {
-        sqlx = sqlx.bind(frequency);
+    if let Some(status) = &dto.status {
+        sqlx = sqlx.bind(status);
     }
     if let Some(visibility) = &dto.visibility {
         sqlx = sqlx.bind(visibility);
+    }
+    if let Some(frequency) = &dto.frequency {
+        sqlx = sqlx.bind(frequency);
     }
     if let Some(trigger_at) = &dto.trigger_at {
         sqlx = sqlx.bind(trigger_at);
@@ -266,46 +270,15 @@ pub async fn edit_reminder(
     let sqlx_result = sqlx.fetch_optional(&state.pool).await;
 
     match sqlx_result {
-        Ok(reminder) => match reminder {
-            Some(reminder) => Ok(reminder),
-            None => Err(ApiError::new(StatusCode::NOT_FOUND, "Reminder not found.")),
+        Ok(data) => match data {
+            Some(memo) => Ok(memo),
+            None => Err(ApiError::new(StatusCode::NOT_FOUND, "Memo not found.")),
         },
         Err(e) => {
             tracing::error!(%e);
             Err(ApiError::new(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to edit reminder",
-            ))
-        }
-    }
-}
-
-pub async fn delete_reminder(
-    id: &str,
-    claims: &AccessTokenClaims,
-    state: &AppState,
-) -> Result<(), ApiError> {
-    let sqlx_result = sqlx::query(
-        "
-        DELETE FROM reminders
-        WHERE id = $1 AND user_id = $2
-        ",
-    )
-    .bind(id)
-    .bind(&claims.id)
-    .execute(&state.pool)
-    .await;
-
-    match sqlx_result {
-        Ok(result) => match result.rows_affected() > 0 {
-            true => Ok(()),
-            false => Err(ApiError::new(StatusCode::NOT_FOUND, "Reminder not found.")),
-        },
-        Err(e) => {
-            tracing::error!(%e);
-            Err(ApiError::new(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to delete reminder.",
+                "Failed to edit memo",
             ))
         }
     }

@@ -68,11 +68,6 @@ pub async fn get_users(
 ) -> Result<Vec<User>, ApiError> {
     // SQL
     let mut query = "SELECT * FROM users WHERE true".to_string();
-
-    let mut sort_field = "created_at".to_string();
-    let mut sort_order = "DESC".to_string();
-    let mut page_limit: u8 = 50;
-
     let mut index: u8 = 0;
 
     if dto.id.is_some() {
@@ -88,6 +83,10 @@ pub async fn get_users(
     }
 
     // SQL SORT
+    let mut sort_field = "created_at".to_string();
+    let mut sort_order = "DESC".to_string();
+    let limit = dto.limit.unwrap_or(100);
+
     if let Some(sort) = &dto.sort {
         match app::util::dto::get_sort_params(sort, None) {
             Ok(sort_params) => {
@@ -100,17 +99,14 @@ pub async fn get_users(
         if let Some(cursor) = &dto.cursor {
             match app::util::dto::get_cursor(&cursor) {
                 Ok(cursor) => {
-                    // add SQL clauses for pagination
+                    // TODO: add SQL clauses for pagination
                 }
                 Err(e) => return Err(e),
             }
         }
     }
     query.push_str(&format!(" ORDER BY users.{} {}", sort_field, sort_order));
-    if let Some(limit) = dto.limit {
-        page_limit = limit;
-    }
-    query.push_str(&format!(" LIMIT {}", page_limit));
+    query.push_str(&format!(" LIMIT {}", limit));
 
     // SQLX
     let mut sqlx = sqlx::query_as::<Postgres, User>(&query);
@@ -125,7 +121,7 @@ pub async fn get_users(
     let sqlx_result = sqlx.fetch_all(&state.pool).await;
 
     match sqlx_result {
-        Ok(reminders) => Ok(reminders),
+        Ok(users) => Ok(users),
         Err(e) => {
             tracing::error!(%e);
             Err(ApiError::new(
@@ -143,7 +139,7 @@ pub async fn get_user_by_id(id: &str, state: &AppState) -> Result<User, ApiError
         .await;
 
     match sqlx_result {
-        Ok(user) => match user {
+        Ok(data) => match data {
             Some(user) => Ok(user),
             None => Err(ApiError::new(StatusCode::NOT_FOUND, "User not found.")),
         },
@@ -164,7 +160,7 @@ pub async fn get_user_by_id_apple(id_apple: &str, state: &AppState) -> Result<Us
         .await;
 
     match sqlx_result {
-        Ok(user) => match user {
+        Ok(data) => match data {
             Some(user) => Ok(user),
             None => Err(ApiError::new(StatusCode::NOT_FOUND, "User not found.")),
         },
@@ -200,7 +196,7 @@ pub async fn get_user_by_username(username: &str, state: &AppState) -> Result<Us
             .await;
 
     match sqlx_result {
-        Ok(user) => match user {
+        Ok(data) => match data {
             Some(user) => Ok(user),
             None => Err(ApiError::new(StatusCode::NOT_FOUND, "User not found.")),
         },
@@ -221,7 +217,7 @@ pub async fn get_user_by_email(email: &str, state: &AppState) -> Result<User, Ap
         .await;
 
     match sqlx_result {
-        Ok(user) => match user {
+        Ok(data) => match data {
             Some(user) => Ok(user),
             None => Err(ApiError::new(StatusCode::NOT_FOUND, "User not found.")),
         },

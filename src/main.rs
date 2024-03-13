@@ -26,7 +26,7 @@ mod app;
 mod auth;
 mod devices;
 mod mail;
-mod reminders;
+mod memos;
 mod users;
 
 #[macro_use]
@@ -58,11 +58,12 @@ async fn main() {
     // properties
     let port = envy.port.to_owned().unwrap_or(3001);
     let cors = CorsLayer::new()
-        .allow_origin(
-            "https://perroquet.beamcove.com"
-                .parse::<HeaderValue>()
-                .unwrap(),
-        )
+        .allow_origin("http://localhost:3000".parse::<HeaderValue>().unwrap())
+        // .allow_origin(
+        //     "https://perroquet.beamcove.com"
+        //         .parse::<HeaderValue>()
+        //         .unwrap(),
+        // )
         .allow_credentials(true)
         .allow_headers([AUTHORIZATION, CONTENT_TYPE])
         .allow_methods([Method::POST, Method::GET, Method::PATCH, Method::DELETE]);
@@ -139,23 +140,10 @@ async fn main() {
         .route("/v1/devices/:id", patch(devices::controller::edit_device))
         .route("/v1/users", get(users::controller::get_users))
         .route("/v1/users/me", get(users::controller::get_me))
-        .route(
-            "/v1/reminders",
-            post(reminders::controller::create_reminder),
-        )
-        .route("/v1/reminders", get(reminders::controller::get_reminders))
-        .route(
-            "/v1/reminders/:id",
-            get(reminders::controller::get_reminder),
-        )
-        .route(
-            "/v1/reminders/:id",
-            patch(reminders::controller::edit_reminder),
-        )
-        .route(
-            "/v1/reminders/:id",
-            delete(reminders::controller::delete_reminder),
-        )
+        .route("/v1/memos", post(memos::controller::create_memo))
+        .route("/v1/memos", get(memos::controller::get_memos))
+        .route("/v1/memos/:id", get(memos::controller::get_memo))
+        .route("/v1/memos/:id", patch(memos::controller::edit_memo))
         .layer(cors)
         .with_state(app_state);
 
