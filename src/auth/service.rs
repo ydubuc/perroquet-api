@@ -94,9 +94,14 @@ pub async fn signin_apple(dto: &SigninAppleDto, state: &AppState) -> Result<Acce
         )
         .await?;
 
-    let Ok(claims) =
-        auth_code_res.decode_id_token(&apple_client.public_keys, &apple_client.config.client_id)
-    else {
+    let client_id = match dto.client.clone().unwrap_or("ios".to_string()).as_ref() {
+        "ios" => apple_client.config.client_id_ios.to_string(),
+        "android" => apple_client.config.client_id_android.to_string(),
+        "web" => apple_client.config.client_id_web.to_string(),
+        _ => apple_client.config.client_id_ios.to_string(),
+    };
+
+    let Ok(claims) = auth_code_res.decode_id_token(&apple_client.public_keys, &client_id) else {
         return Err(ApiError::internal_server_error());
     };
 

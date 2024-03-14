@@ -44,10 +44,10 @@ impl AppleAuthClient {
     pub async fn login(&mut self, http_client: &reqwest::Client) -> Result<(), AppError> {
         let client_secret_ios =
             Self::generate_client_secret(self.config.clone(), "ios".to_string())?;
-        let client_secret_web =
-            Self::generate_client_secret(self.config.clone(), "web".to_string())?;
         let client_secret_android =
             Self::generate_client_secret(self.config.clone(), "android".to_string())?;
+        let client_secret_web =
+            Self::generate_client_secret(self.config.clone(), "web".to_string())?;
 
         let result = http_client
             .get("https://appleid.apple.com/auth/keys")
@@ -79,16 +79,16 @@ impl AppleAuthClient {
         client_type: String,
     ) -> Result<String, AppError> {
         let client_id = match client_type.as_ref() {
-            "ios" => config.client_id.clone(),
-            "android" => format!("{}{}", config.client_id, ".Android"),
-            "web" => format!("{}{}", config.client_id, ".Web"),
-            _ => config.client_id.clone(),
+            "ios" => &config.client_id_ios,
+            "android" => &config.client_id_android,
+            "web" => &config.client_id_web,
+            _ => &config.client_id_ios,
         };
 
         let current_time_in_secs = app::util::time::current_time_in_secs();
         let claims = serde_json::json!(ClientClaims {
             iss: config.team_id.to_string(),
-            sub: client_id,
+            sub: client_id.to_string(),
             aud: "https://appleid.apple.com".to_string(),
             iat: current_time_in_secs,
             exp: current_time_in_secs + 3600,
@@ -116,12 +116,11 @@ impl AppleAuthClient {
         http_client: &reqwest::Client,
     ) -> Result<AppleAuthCodeResponse, ApiError> {
         let client_id = match client_type.as_ref() {
-            "ios" => format!("{}", self.config.client_id),
-            "android" => format!("{}.Android", self.config.client_id),
-            "web" => format!("{}.Web", self.config.client_id),
-            _ => self.config.client_id.clone(),
+            "ios" => &self.config.client_id_ios,
+            "android" => &self.config.client_id_android,
+            "web" => &self.config.client_id_web,
+            _ => &self.config.client_id_ios,
         };
-
         let client_secret = match client_type.as_ref() {
             "ios" => &self.client_secret_ios,
             "android" => &self.client_secret_android,
@@ -130,11 +129,10 @@ impl AppleAuthClient {
         };
 
         let mut form = HashMap::new();
-        form.insert("client_id", client_id);
+        form.insert("client_id", client_id.to_string());
         form.insert("client_secret", client_secret.to_string());
         form.insert("code", auth_code.to_string());
         form.insert("grant_type", "authorization_code".to_string());
-
         if client_type == "web" {
             form.insert(
                 "redirect_uri",

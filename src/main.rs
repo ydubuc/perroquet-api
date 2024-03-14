@@ -71,7 +71,9 @@ async fn main() {
 
     let apple_config = apple::models::client_config::ClientConfig {
         team_id: envy.apple_team_id.to_owned(),
-        client_id: envy.apple_client_id.to_owned(),
+        client_id_ios: envy.apple_client_id.to_owned(),
+        client_id_android: format!("{}.Android", envy.apple_client_id),
+        client_id_web: format!("{}.Web", envy.apple_client_id),
         key_id: envy.apple_key_id.to_owned(),
         private_key: envy.apple_private_key.to_owned(),
     };
