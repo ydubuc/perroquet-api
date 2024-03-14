@@ -42,27 +42,6 @@ impl AppleAuthClient {
     }
 
     pub async fn login(&mut self, http_client: &reqwest::Client) -> Result<(), AppError> {
-        // let current_time_in_secs = app::util::time::current_time_in_secs();
-        // let claims = serde_json::json!(ClientClaims {
-        //     iss: self.config.team_id.to_string(),
-        //     sub: self.config.client_id.to_string(),
-        //     aud: "https://appleid.apple.com".to_string(),
-        //     iat: current_time_in_secs,
-        //     exp: current_time_in_secs + 3600,
-        // });
-        // let Ok(encoding_key) = EncodingKey::from_ec_pem(self.config.private_key.as_bytes()) else {
-        //     return Err(AppError::new(
-        //         "auth::util::apple::client failed to encode private key",
-        //     ));
-        // };
-        // let mut header = Header::new(Algorithm::ES256);
-        // header.kid = Some(self.config.key_id.to_string());
-        // let Ok(client_secret) = encode(&header, &claims, &encoding_key) else {
-        //     return Err(AppError::new(
-        //         "auth::util::apple::client failed to encode claims",
-        //     ));
-        // };
-
         let client_secret_ios =
             Self::generate_client_secret(self.config.clone(), "ios".to_string())?;
         let client_secret_web =
@@ -101,8 +80,8 @@ impl AppleAuthClient {
     ) -> Result<String, AppError> {
         let client_id = match client_type.as_ref() {
             "ios" => config.client_id.clone(),
-            "web" => format!("{}{}", config.client_id, ".Web"),
             "android" => format!("{}{}", config.client_id, ".Android"),
+            "web" => format!("{}{}", config.client_id, ".Web"),
             _ => config.client_id.clone(),
         };
 
@@ -155,6 +134,13 @@ impl AppleAuthClient {
         form.insert("client_secret", client_secret.to_string());
         form.insert("code", auth_code.to_string());
         form.insert("grant_type", "authorization_code".to_string());
+
+        if client_type == "web" {
+            form.insert(
+                "redirect_uri",
+                "https://perroquet.beamcove.com/signin/apple".to_string(),
+            );
+        }
 
         let result = http_client
             .post("https://appleid.apple.com/auth/token")
