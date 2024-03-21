@@ -13,11 +13,7 @@ pub struct SignupDto {
     #[validate(email)]
     pub email: String,
     #[validate(
-        length(
-            min = 8,
-            max = 64,
-            message = "password must be between at least 8 characters."
-        ),
+        length(min = 8, max = 64, message = "password must be least 8 characters."),
         custom = "super::validate_password"
     )]
     pub password: String,
