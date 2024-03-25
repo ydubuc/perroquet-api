@@ -15,7 +15,7 @@ pub struct EditMemoDto {
         message = "description must be between 1 and 65535 characters."
     ))]
     pub description: Option<String>,
-    pub priority: Option<String>,
+    pub priority: Option<i16>,
     pub status: Option<String>,
     pub visibility: Option<i16>,
     pub frequency: Option<String>,

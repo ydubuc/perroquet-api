@@ -6,7 +6,7 @@ pub struct GetMemosDto {
     pub id: Option<String>,
     pub user_id: Option<String>,
     pub search: Option<String>,
-    pub priority: Option<String>,
+    pub priority: Option<i16>,
     pub status: Option<String>,
     pub visibility: Option<i16>,
     pub sort: Option<String>,

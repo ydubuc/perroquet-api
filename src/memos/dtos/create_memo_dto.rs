@@ -17,7 +17,7 @@ pub struct CreateMemoDto {
         message = "description must be between 1 and 65535 characters."
     ))]
     pub description: Option<String>,
-    pub priority: Option<String>,
+    pub priority: i16,
     pub visibility: i16,
     pub frequency: Option<String>,
     pub trigger_at: i64,

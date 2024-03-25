@@ -28,7 +28,7 @@ CREATE TABLE memos(
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
     description TEXT,
-    priority TEXT,
+    priority SMALLINT NOT NULL,
     status TEXT NOT NULL,
     visibility SMALLINT NOT NULL,
     frequency TEXT,
